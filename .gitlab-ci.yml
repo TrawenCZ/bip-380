@@ -1,0 +1,35 @@
+default:
+  image: rust:alpine3.20
+  before_script:
+    - apk add --no-cache alpine-sdk
+    - rustc --version
+    - cargo --version
+  tags:
+    - shared-fi
+
+stages:
+  - build
+  - preflight
+  - test
+
+build:
+  stage: build
+  script:
+    - echo "Building project..."
+    - cargo build --verbose
+
+lint:
+  stage: preflight
+  script:
+    - echo "Checking formatting via rustfmt..."
+    - rustup component add rustfmt
+    - cargo fmt -- --check
+    - echo "Checking for clippy warnings..."
+    - rustup component add clippy
+    - cargo clippy -- -D warnings
+
+test:
+  stage: test
+  script:
+    - echo "Testing project..."
+    - cargo test
