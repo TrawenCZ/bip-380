@@ -1,5 +1,3 @@
-use std::fmt::Error;
-
 /// A trait for parsing command line arguments into a command struct.
 #[allow(unused)]
 pub trait Parsable {
@@ -12,7 +10,7 @@ pub trait Parsable {
     /// # Returns
     ///
     /// A struct with the parsed arguments.
-    fn parse(args: Vec<String>) -> Result<Self, Error>
+    fn parse(args: Vec<&str>) -> Result<Self, String>
     where
         Self: Sized;
 }
