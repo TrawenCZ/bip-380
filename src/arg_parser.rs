@@ -1,7 +1,7 @@
 use crate::{
     structs::{
         derive_key_input::DeriveKeyInput, key_expression_input::KeyExpressionInput,
-        script_expression_input::ScriptExpressionInput,
+        parsing_error::ParsingError, script_expression_input::ScriptExpressionInput,
     },
     traits::parsable::Parsable,
 };
@@ -14,7 +14,7 @@ pub enum Command {
     ScriptExpression(ScriptExpressionInput),
 }
 
-pub fn parse_args(args: Vec<&str>) -> Result<Command, String> {
+pub fn parse_args(args: Vec<&str>) -> Result<Command, ParsingError> {
     // if args includes --help, we should print the help message
     if args.contains(&"--help") {
         return Ok(Command::Help);
@@ -28,9 +28,9 @@ pub fn parse_args(args: Vec<&str>) -> Result<Command, String> {
             "script-expression" => Ok(Command::ScriptExpression(ScriptExpressionInput::parse(
                 args,
             )?)),
-            _ => Err(format!("Invalid argument: {}", arg)),
+            _ => Err(ParsingError::new(&format!("Invalid argument: {}", arg))),
         },
-        None => Err("No valid argument was provided.".to_string()),
+        None => Err(ParsingError::new("No valid argument was provided.")),
     }
 }
 

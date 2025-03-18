@@ -12,7 +12,7 @@ fn main() {
 
     #[allow(unused_variables)]
     let command = arg_parser::parse_args(args).unwrap_or_else(|err| {
-        eprintln!("Error: {}", err);
+        eprintln!("{}", err);
         std::process::exit(1);
     });
 }
