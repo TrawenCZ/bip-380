@@ -3,10 +3,10 @@ use crate::traits::parsable::Parsable;
 use super::parsing_error::ParsingError;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct ScriptExpressionInput {}
+pub struct DeriveKeyConfig {}
 
-impl Parsable for ScriptExpressionInput {
+impl Parsable for DeriveKeyConfig {
     fn parse(_args: Vec<&str>) -> Result<Self, ParsingError> {
-        Ok(ScriptExpressionInput {})
+        Ok(DeriveKeyConfig {})
     }
 }
