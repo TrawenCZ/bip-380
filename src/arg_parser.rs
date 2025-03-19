@@ -2,8 +2,8 @@ use std::io::{stdin, BufRead, BufReader};
 
 use crate::{
     structs::{
-        derive_key_input::DeriveKeyInput, key_expression_input::KeyExpressionInput,
-        parsing_error::ParsingError, script_expression_input::ScriptExpressionInput,
+        derive_key_config::DeriveKeyConfig, key_expression_config::KeyExpressionConfig,
+        parsing_error::ParsingError, script_expression_config::ScriptExpressionConfig,
     },
     traits::parsable::Parsable,
 };
@@ -11,9 +11,9 @@ use crate::{
 #[derive(Debug, PartialEq, Eq)]
 pub enum Command {
     Help,
-    DeriveKey(DeriveKeyInput),
-    KeyExpression(KeyExpressionInput),
-    ScriptExpression(ScriptExpressionInput),
+    DeriveKey(DeriveKeyConfig),
+    KeyExpression(KeyExpressionConfig),
+    ScriptExpression(ScriptExpressionConfig),
 }
 
 pub type Inputs = Box<dyn Iterator<Item = String>>;
@@ -57,9 +57,9 @@ pub fn parse_args(args: Vec<&str>) -> Result<(Command, Inputs), ParsingError> {
     let inputs = get_inputs(&args)?;
 
     let command = match *first_arg {
-        "derive-key" => Command::DeriveKey(DeriveKeyInput::parse(args)?),
-        "key-expression" => Command::KeyExpression(KeyExpressionInput::parse(args)?),
-        "script-expression" => Command::ScriptExpression(ScriptExpressionInput::parse(args)?),
+        "derive-key" => Command::DeriveKey(DeriveKeyConfig::parse(args)?),
+        "key-expression" => Command::KeyExpression(KeyExpressionConfig::parse(args)?),
+        "script-expression" => Command::ScriptExpression(ScriptExpressionConfig::parse(args)?),
         _ => {
             return Err(ParsingError::new(&format!(
                 "Invalid argument: {}",

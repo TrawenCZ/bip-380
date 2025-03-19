@@ -1,8 +1,12 @@
 use std::env;
 
 use arg_parser::Command;
+use subcommands::derive_key::derive_key;
+use subcommands::key_expression::key_expression;
+use subcommands::script_expression::script_expression;
 mod arg_parser;
 mod structs;
+mod subcommands;
 mod traits;
 
 fn main() {
@@ -17,24 +21,35 @@ fn main() {
         std::process::exit(1);
     });
 
-    if command == Command::Help {
-        println!("Help message");
-        std::process::exit(0);
-    }
-
-    for input in inputs {
-        println!("{}", input);
-        match command {
-            Command::KeyExpression(_) => {
-                println!("Running Key expression subcommand with input: {}", input);
+    match command {
+        Command::KeyExpression(config) => {
+            for input in inputs {
+                key_expression(input, &config).unwrap_or_else(|err| {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                });
             }
-            Command::ScriptExpression(_) => {
-                println!("Running Script expression subcommand with input: {}", input);
+        }
+        Command::ScriptExpression(config) => {
+            for input in inputs {
+                script_expression(input, &config).unwrap_or_else(|err| {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                });
             }
-            Command::DeriveKey(_) => {
-                println!("Running Derive key subcommand with input: {}", input);
+        }
+        Command::DeriveKey(config) => {
+            for input in inputs {
+                derive_key(input, &config).unwrap_or_else(|err| {
+                    eprintln!("{}", err);
+                    std::process::exit(1);
+                });
             }
-            Command::Help => { /* Already handled */ }
+        }
+        Command::Help => {
+            println!("Help message");
         }
     }
+
+    std::process::exit(0);
 }
