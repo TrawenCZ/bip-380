@@ -1,10 +1,9 @@
 use std::env;
 
-use arg_parser::Command;
+use parsers::arg_parser::{self, Command};
 use subcommands::derive_key::derive_key;
 use subcommands::key_expression::key_expression;
 use subcommands::script_expression::script_expression;
-mod arg_parser;
 mod parsers;
 mod structs;
 mod subcommands;
