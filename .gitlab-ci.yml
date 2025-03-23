@@ -7,29 +7,22 @@ default:
   tags:
     - shared-fi
 
+variables:
+  PROJECT_NAME: "bip380"
+
 stages:
-  - build
-  - preflight
-  - test
+  - build_test_lint
 
-build:
-  stage: build
+build_test_lint:
+  stage: build_test_lint
   script:
-    - echo "Building project..."
+    - echo "Building ${PROJECT_NAME} project..."
     - cargo build --verbose
-
-lint:
-  stage: preflight
-  script:
-    - echo "Checking formatting via rustfmt..."
+    - echo "Testing ${PROJECT_NAME} project..."
+    - cargo test
+    - echo "Checking formatting via rustfmt for ${PROJECT_NAME}..."
     - rustup component add rustfmt
     - cargo fmt -- --check
-    - echo "Checking for clippy warnings..."
+    - echo "Checking for clippy warnings for ${PROJECT_NAME}..."
     - rustup component add clippy
     - cargo clippy -- -D warnings
-
-test:
-  stage: test
-  script:
-    - echo "Testing project..."
-    - cargo test
