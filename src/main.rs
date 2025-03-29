@@ -53,3 +53,20 @@ fn main() {
 
     std::process::exit(0);
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use assert_cmd::Command;
+
+    #[test]
+    fn test_help() {
+        let expected_help_message = "Help message\n";
+        Command::cargo_bin(env!("CARGO_PKG_NAME"))
+            .unwrap()
+            .arg("--help")
+            .assert()
+            .success()
+            .stdout(expected_help_message);
+    }
+}
