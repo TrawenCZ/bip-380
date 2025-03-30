@@ -5,6 +5,6 @@ use crate::structs::{
 pub fn script_expression(
     _input: String,
     _config: &ScriptExpressionConfig,
-) -> Result<(), ParsingError> {
-    Ok(())
+) -> Result<String, ParsingError> {
+    todo!();
 }

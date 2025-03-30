@@ -9,6 +9,13 @@ mod structs;
 mod subcommands;
 mod traits;
 
+// TODO: COMPLETE THE HELP MESSAGE
+const HELP_MESSAGE: &str = r#"Help message"#;
+
+// exit codes
+const SUCCESS: i32 = 0;
+const FAILURE: i32 = 1;
+
 fn main() {
     // collect args from the CLI skipping the first argument, which is the name of the program
     let args: Vec<String> = env::args().skip(1).collect();
@@ -18,40 +25,49 @@ fn main() {
 
     let (command, inputs) = arg_parser::parse_args(args).unwrap_or_else(|err| {
         eprintln!("{}", err);
-        std::process::exit(1);
+        std::process::exit(FAILURE);
     });
 
     match command {
         Command::KeyExpression(config) => {
             for input in inputs {
-                key_expression(input, &config).unwrap_or_else(|err| {
-                    eprintln!("{}", err);
-                    std::process::exit(1);
-                });
+                match key_expression(input, &config) {
+                    Ok(result) => println!("{}", result),
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        std::process::exit(FAILURE);
+                    }
+                }
             }
         }
         Command::ScriptExpression(config) => {
             for input in inputs {
-                script_expression(input, &config).unwrap_or_else(|err| {
-                    eprintln!("{}", err);
-                    std::process::exit(1);
-                });
+                match script_expression(input, &config) {
+                    Ok(result) => println!("{}", result),
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        std::process::exit(FAILURE);
+                    }
+                }
             }
         }
         Command::DeriveKey(config) => {
             for input in inputs {
-                derive_key(input, &config).unwrap_or_else(|err| {
-                    eprintln!("{}", err);
-                    std::process::exit(1);
-                });
+                match derive_key(input, &config) {
+                    Ok(result) => println!("{}", result),
+                    Err(err) => {
+                        eprintln!("{}", err);
+                        std::process::exit(FAILURE);
+                    }
+                }
             }
         }
         Command::Help => {
-            println!("Help message");
+            println!("{}", HELP_MESSAGE);
         }
     }
 
-    std::process::exit(0);
+    std::process::exit(SUCCESS);
 }
 
 #[cfg(test)]
