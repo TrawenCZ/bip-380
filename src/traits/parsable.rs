@@ -12,7 +12,7 @@ pub trait Parsable {
     /// # Returns
     ///
     /// A struct with the parsed arguments.
-    fn parse(args: Vec<&str>) -> Result<Self, ParsingError>
+    fn parse(args: &mut Vec<&str>) -> Result<Self, ParsingError>
     where
         Self: Sized;
 }

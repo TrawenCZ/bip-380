@@ -8,6 +8,7 @@ mod parsers;
 mod structs;
 mod subcommands;
 mod traits;
+mod utils;
 
 // TODO: COMPLETE THE HELP MESSAGE
 const HELP_MESSAGE: &str = r#"Help message"#;
