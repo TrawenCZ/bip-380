@@ -4,8 +4,8 @@ use super::parsing_error::ParsingError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ScriptExpressionConfig {
-    compute_checksum: bool,
-    verify_checksum: bool,
+    pub compute_checksum: bool,
+    pub verify_checksum: bool,
 }
 
 impl Parsable for ScriptExpressionConfig {
