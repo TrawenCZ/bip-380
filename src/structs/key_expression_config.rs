@@ -6,7 +6,7 @@ use super::parsing_error::ParsingError;
 pub struct KeyExpressionConfig {}
 
 impl Parsable for KeyExpressionConfig {
-    fn parse(_args: Vec<&str>) -> Result<Self, ParsingError> {
+    fn parse(_args: &mut Vec<&str>) -> Result<Self, ParsingError> {
         Ok(KeyExpressionConfig {})
     }
 }

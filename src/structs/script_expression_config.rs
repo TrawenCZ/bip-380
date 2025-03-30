@@ -9,9 +9,9 @@ pub struct ScriptExpressionConfig {
 }
 
 impl Parsable for ScriptExpressionConfig {
-    fn parse(args: Vec<&str>) -> Result<Self, ParsingError> {
-        let compute_checksum = parse_boolean_flag(&args, "compute-checksum");
-        let verify_checksum = parse_boolean_flag(&args, "verify-checksum");
+    fn parse(args: &mut Vec<&str>) -> Result<Self, ParsingError> {
+        let compute_checksum = parse_boolean_flag(args, "compute-checksum");
+        let verify_checksum = parse_boolean_flag(args, "verify-checksum");
         if compute_checksum && verify_checksum {
             return Err(ParsingError::new(
                 "use only '--verify-checksum' or '--compute-checksum', not both",
@@ -35,10 +35,10 @@ mod tests {
 
     #[test]
     fn test_no_checksum_flags_provided() {
-        let args = vec!["script-expression"];
+        let mut args = vec!["script-expression"];
 
         assert_eq!(
-            ScriptExpressionConfig::parse(args),
+            ScriptExpressionConfig::parse(&mut args),
             Ok(ScriptExpressionConfig {
                 compute_checksum: false,
                 verify_checksum: false
@@ -48,10 +48,10 @@ mod tests {
 
     #[test]
     fn test_compute_checksum_flag_provided() {
-        let args = vec!["script-expression", "--compute-checksum"];
+        let mut args = vec!["script-expression", "--compute-checksum"];
 
         assert_eq!(
-            ScriptExpressionConfig::parse(args),
+            ScriptExpressionConfig::parse(&mut args),
             Ok(ScriptExpressionConfig {
                 compute_checksum: true,
                 verify_checksum: false
@@ -61,10 +61,10 @@ mod tests {
 
     #[test]
     fn test_verify_checksum_flag_provided() {
-        let args = vec!["script-expression", "--verify-checksum"];
+        let mut args = vec!["script-expression", "--verify-checksum"];
 
         assert_eq!(
-            ScriptExpressionConfig::parse(args),
+            ScriptExpressionConfig::parse(&mut args),
             Ok(ScriptExpressionConfig {
                 compute_checksum: false,
                 verify_checksum: true
@@ -74,14 +74,14 @@ mod tests {
 
     #[test]
     fn test_both_checksum_flags_provided() {
-        let args = vec![
+        let mut args = vec![
             "script-expression",
             "--compute-checksum",
             "--verify-checksum",
         ];
 
         assert_eq!(
-            ScriptExpressionConfig::parse(args),
+            ScriptExpressionConfig::parse(&mut args),
             Err(ParsingError::new(
                 "use only '--verify-checksum' or '--compute-checksum', not both"
             ))
