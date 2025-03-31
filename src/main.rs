@@ -72,15 +72,18 @@ fn main() {
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use assert_cmd::Command;
+
+    pub fn get_cmd() -> Command {
+        Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap()
+    }
 
     #[test]
     fn test_help() {
         let expected_help_message = "Help message\n";
-        Command::cargo_bin(env!("CARGO_PKG_NAME"))
-            .unwrap()
+        get_cmd()
             .arg("--help")
             .assert()
             .success()

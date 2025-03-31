@@ -6,7 +6,7 @@ use super::parsing_error::ParsingError;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct DeriveKeyConfig {
-    pub path: Option<DerivationPath>,
+    pub path: DerivationPath,
 }
 
 impl Parsable for DeriveKeyConfig {
@@ -25,7 +25,8 @@ impl Parsable for DeriveKeyConfig {
                         message: err.to_string(),
                     })
             })
-            .transpose()?;
+            .transpose()?
+            .unwrap_or("m".parse()?);
         Ok(DeriveKeyConfig { path })
     }
 }
@@ -51,9 +52,7 @@ mod tests {
 
         assert_eq!(
             DeriveKeyConfig::parse(&mut args),
-            Ok(DeriveKeyConfig {
-                path: Some(parsed_path)
-            })
+            Ok(DeriveKeyConfig { path: parsed_path })
         )
     }
 
@@ -68,9 +67,7 @@ mod tests {
 
         assert_eq!(
             DeriveKeyConfig::parse(&mut args),
-            Ok(DeriveKeyConfig {
-                path: Some(parsed_path)
-            })
+            Ok(DeriveKeyConfig { path: parsed_path })
         )
     }
 
