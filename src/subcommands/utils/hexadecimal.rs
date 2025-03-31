@@ -1,4 +1,27 @@
+use std::num::ParseIntError;
+
 use crate::structs::parsing_error::ParsingError;
+
+/// The function `decode_hex` takes a hexadecimal string as input and returns a Result containing a
+/// vector of u8 bytes after decoding the hexadecimal string.
+///
+/// Arguments:
+///
+/// * `s`: The function `decode_hex` takes a hexadecimal string `s` as input and attempts to decode it
+///   into a vector of bytes (`Vec<u8>`). Each pair of characters in the input string represents a byte in
+///   hexadecimal format. The function processes the input string by converting each pair of characters
+///   into a
+///
+/// Returns:
+///
+/// The `decode_hex` function is returning a `Result` containing a decoded number in `Vec<u8>` if conversion
+/// was successful or a `ParseIntError`.
+pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
+    (0..s.len())
+        .step_by(2)
+        .map(|i| u8::from_str_radix(&s[i..i + 2], 16))
+        .collect()
+}
 
 pub fn assert_hexadecimal_format<'a>(
     input: &'a str,
