@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bip32 = "0.5.3"
+bs58 = "0.5.1"
 
 [dev-dependencies]
 assert_cmd = "2.0.16"
