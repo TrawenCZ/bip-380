@@ -2,7 +2,7 @@ use crate::{parsers::flag_parser::parse_boolean_flag, traits::parsable::Parsable
 
 use super::parsing_error::ParsingError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct ScriptExpressionConfig {
     pub compute_checksum: bool,
     pub verify_checksum: bool,
