@@ -2,11 +2,15 @@ use crate::structs::parsing_error::ParsingError;
 use bip32::{ChildNumber, XPrv, XPub};
 use std::str::FromStr;
 
+pub fn has_extended_key_prefix(key: &str) -> bool {
+    key.starts_with("xpub") || key.starts_with("xprv")
+}
+
 /// Validate whether key is xpub encoded extended public key or xprv encoded extended private key (as defined in BIP 32):
 ///     Followed by zero or more /NUM or /NUMh path elements indicating BIP 32 derivation steps to be taken after the given extended key.
 ///     Optionally followed by a single /* or /*h final step to denote all direct unhardened or hardened children.
 pub fn validate_extended_key(key: &str) -> Result<(), ParsingError> {
-    if !(key.starts_with("xpub") || key.starts_with("xprv")) {
+    if !has_extended_key_prefix(key) {
         return Err(ParsingError::new("Key must start with xpub or xprv"));
     }
 
