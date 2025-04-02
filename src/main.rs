@@ -4,14 +4,12 @@ use parsers::arg_parser::{self, Command};
 use subcommands::derive_key::derive_key;
 use subcommands::key_expression::key_expression;
 use subcommands::script_expression::script_expression;
+use utils::info_messages::HELP_MESSAGE;
 mod parsers;
 mod structs;
 mod subcommands;
 mod traits;
 mod utils;
-
-// TODO: COMPLETE THE HELP MESSAGE
-const HELP_MESSAGE: &str = r#"Help message"#;
 
 // exit codes
 const SUCCESS: i32 = 0;
@@ -82,7 +80,7 @@ mod tests {
 
     #[test]
     fn test_help() {
-        let expected_help_message = "Help message\n";
+        let expected_help_message = format!("{HELP_MESSAGE}\n");
         get_cmd()
             .arg("--help")
             .assert()
