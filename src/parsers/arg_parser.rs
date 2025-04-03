@@ -28,12 +28,17 @@ pub type Inputs = Box<dyn Iterator<Item = String>>;
 fn get_inputs(args: &Vec<&str>) -> Result<Inputs, ParsingError> {
     // if '-' is present in args, we should read from stdin
     match args.contains(&"-") {
-        true => Ok(Box::new(BufReader::new(stdin()).lines().map(|line| {
-            line.unwrap_or_else(|e| {
-                eprintln!("Error reading from stdin: {}", e);
-                std::process::exit(FAILURE);
-            })
-        }))),
+        true => Ok(Box::new(
+            BufReader::new(stdin())
+                .lines()
+                .map(|line| {
+                    line.unwrap_or_else(|e| {
+                        eprintln!("Error reading from stdin: {}", e);
+                        std::process::exit(FAILURE);
+                    })
+                })
+                .filter(|line| !line.is_empty()),
+        )),
         false => {
             let mut inputs_peekable = args.iter().skip(1).peekable();
             match inputs_peekable.peek() {
