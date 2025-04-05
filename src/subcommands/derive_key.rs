@@ -208,4 +208,14 @@ mod tests {
             .success()
             .stdout(expected_output);
     }
+
+    #[test]
+    fn test_pubkey_and_prvkey_mismatch() {
+        let expected_stderr = "Parsing error: cryptographic error\n";
+        get_cmd()
+            .args(["derive-key", "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm"])
+            .assert()
+            .failure()
+            .stderr(expected_stderr);
+    }
 }
