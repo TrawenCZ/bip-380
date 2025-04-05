@@ -1,10 +1,17 @@
-use crate::structs::{
-    parsing_error::ParsingError, script_expression_config::ScriptExpressionConfig,
+use crate::{
+    structs::{parsing_error::ParsingError, script_expression_config::ScriptExpressionConfig},
+    traits::string_utils::CharArrayUtils,
+    utils::error_messages::script_sh_unsupported_arg_err,
 };
 
-use super::utils::{
-    checksum::{checksum_check, checksum_create, checksum_length_check, CHECKSUM_DIVIDER_SYMBOL},
-    hexadecimal::assert_hexadecimal_format,
+use super::{
+    key_expression::validate_key_expression,
+    utils::{
+        checksum::{
+            checksum_check, checksum_create, checksum_length_check, CHECKSUM_DIVIDER_SYMBOL,
+        },
+        hexadecimal::assert_hexadecimal_format,
+    },
 };
 
 pub fn script_expression(
@@ -13,23 +20,66 @@ pub fn script_expression(
 ) -> Result<String, ParsingError> {
     let (script, checksum) = divide_script_and_checksum(input);
     match script.trim().chars().collect::<Vec<char>>().as_slice() {
-        ['r', 'a', 'w', wrapped_hex @ .., ')'] => match wrapped_hex
-            .iter()
-            .collect::<String>()
-            .trim()
-            .chars()
-            .collect::<Vec<char>>()
-            .as_slice()
-        {
-            ['(', hex @ ..] => {
-                let hex = hex.iter().collect::<String>();
-                assert_hexadecimal_format(&hex, "raw function argument")?;
-                script_operation(&script, &checksum, config)
+        ['r', 'a', 'w', rest @ ..] => match rest.extract_args("raw")?.as_slice() {
+            [arg] => {
+                assert_hexadecimal_format(arg, "raw function argument")?;
             }
-            _ => Err(ParsingError::new("script parsing failed!")),
+            _ => return Err(ParsingError::new("script parsing failed!")),
         },
-        _ => todo!(),
+        ['m', 'u', 'l', 't', 'i', rest @ ..] => match rest.extract_args("multi")?.as_slice() {
+            [arg_count, rest_of_args @ ..] => match arg_count.parse::<i32>()? {
+                val if val >= 0 && val <= rest_of_args.len() as i32 => {
+                    for arg in rest_of_args {
+                        validate_key_expression(arg.clone())?; // TODO: Try to avoid clone?
+                    }
+                }
+                val if val < 0 => {
+                    return Err(ParsingError::new("arg count indicator cannot be negative"))
+                }
+                _ => {
+                    return Err(ParsingError::new(
+                        "arg count indicator cannot be higher than actual args count",
+                    ))
+                }
+            },
+            _ => return Err(ParsingError::new("at least two arguments needed")),
+        },
+        ['p', 'k', 'h', rest @ ..] => match rest.extract_args("pkh")?.as_slice() {
+            [arg] => {
+                validate_key_expression(arg.clone())?;
+            }
+            _ => {
+                return Err(ParsingError::new(
+                    "exactly one argument is needed for pkh script",
+                ))
+            }
+        },
+        ['p', 'k', rest @ ..] => match rest.extract_args("pk")?.as_slice() {
+            [arg] => {
+                validate_key_expression(arg.clone())?;
+            }
+            _ => {
+                return Err(ParsingError::new(
+                    "exactly one argument is needed for pk script",
+                ))
+            }
+        },
+        ['s', 'h', rest @ ..] => match rest.extract_args("sh")?.as_slice() {
+            [arg]
+                if arg.starts_with("pkh") || arg.starts_with("pk") || arg.starts_with("multi") =>
+            {
+                script_expression(arg.clone(), &ScriptExpressionConfig::default())?;
+            }
+            [arg] => return Err(ParsingError::new(&script_sh_unsupported_arg_err(arg))),
+            _ => {
+                return Err(ParsingError::new(
+                    "exactly one argument is needed for sh script",
+                ))
+            }
+        },
+        _ => return Err(ParsingError::new("parsing of the script failed!")),
     }
+    script_operation(&script, &checksum, config)
 }
 
 fn divide_script_and_checksum(input: String) -> (String, Option<String>) {
@@ -79,154 +129,409 @@ fn script_operation(
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
-    use crate::structs::script_expression_config::ScriptExpressionConfig;
+    use crate::{
+        structs::script_expression_config::ScriptExpressionConfig,
+        utils::error_messages::script_arg_extraction_err,
+    };
+
+    const CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY: ScriptExpressionConfig = ScriptExpressionConfig {
+        compute_checksum: false,
+        verify_checksum: false,
+    };
+
+    const CONFIG_WITH_TRUE_VERIFY: ScriptExpressionConfig = ScriptExpressionConfig {
+        compute_checksum: false,
+        verify_checksum: true,
+    };
+
+    const CONFIG_WITH_TRUE_COMPUTE: ScriptExpressionConfig = ScriptExpressionConfig {
+        compute_checksum: true,
+        verify_checksum: false,
+    };
 
     #[test]
     fn test_raw_script() {
-        // without checksum validation and computation
-        let config_with_false_compute_and_verify = ScriptExpressionConfig {
-            compute_checksum: false,
-            verify_checksum: false,
-        };
         assert_eq!(
             script_expression(
                 "raw(deadbeef)".to_string(),
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Ok("raw(deadbeef)".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw( deadbeef )".to_string(),
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Ok("raw( deadbeef )".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(DEAD BEEF)".to_string(),
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Ok("raw(DEAD BEEF)".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(DEA D BEEF)".to_string(),
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Ok("raw(DEA D BEEF)".to_string())
         );
         assert_eq!(
-            script_expression("  \t\t\t  raw  \t\t\t  (  \t\t\t  D  \t\t\t  E  \t\t\t  A  \t\t\t  D  \t\t\t  )  \t\t\t  ".to_string(), &config_with_false_compute_and_verify),
+            script_expression("  \t\t\t  raw  \t\t\t  (  \t\t\t  D  \t\t\t  E  \t\t\t  A  \t\t\t  D  \t\t\t  )  \t\t\t  ".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
             Ok("  \t\t\t  raw  \t\t\t  (  \t\t\t  D  \t\t\t  E  \t\t\t  A  \t\t\t  D  \t\t\t  )  \t\t\t  ".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(nothexadecimal)".to_string(),
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Err(ParsingError::new(
                 "raw function argument 'nothexadecimal' is not a valid hexadecimal string!"
             ))
         );
         assert_eq!(
-            script_expression("raw()".to_string(), &config_with_false_compute_and_verify),
+            script_expression(
+                "raw(nothexadecimal)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "raw function argument 'nothexadecimal' is not a valid hexadecimal string!"
+            ))
+        );
+
+        assert_eq!(
+            script_expression("raw()".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
             Err(ParsingError::new(
                 "raw function argument '' is not a valid hexadecimal string!"
             ))
         );
         assert_eq!(
             script_expression(
-                "raw(deadbeef)#invalid".to_string(),
-                &config_with_false_compute_and_verify
+                "ra w(deadbeef)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("parsing of the script failed!"))
+        );
+        assert_eq!(
+            script_expression(
+                "raw(deadbeef)#".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("checksum length is incorrect!"))
+        );
+        assert_eq!(
+            script_expression(
+                "raw(deadbeef)#89f8spxmx".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("checksum length is incorrect!"))
+        );
+        assert_eq!(
+            script_expression(
+                "raw(deadbeef)#89f8spx".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Err(ParsingError::new("checksum length is incorrect!"))
         );
         assert_eq!(
             script_expression(
                 "raw(deadbeef)#0invalid".to_string(), // despite it being incorrent, the verification is ignored, but the count of 8 chars still fits
-                &config_with_false_compute_and_verify
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
             Ok("raw(deadbeef)#0invalid".to_string())
         );
         assert_eq!(
-            script_expression("rawraw)".to_string(), &config_with_false_compute_and_verify),
-            Err(ParsingError::new("script parsing failed!"))
+            script_expression(
+                "raw(deadbeef)##89f8spxm".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("checksum length is incorrect!"))
+        );
+        assert_eq!(
+            script_expression("rawraw)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
+            Err(ParsingError::new(&script_arg_extraction_err("raw")))
         );
 
-        // with verify checksum
-        let config_with_true_verify = ScriptExpressionConfig {
-            compute_checksum: false,
-            verify_checksum: true,
-        };
         assert_eq!(
             script_expression(
                 "raw(deadbeef)#89f8spxm".to_string(),
-                &config_with_true_verify
+                &CONFIG_WITH_TRUE_VERIFY
             ),
             Ok("Veritification of the 'raw(deadbeef)#89f8spxm' script succeeded!".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw( deadbeef )#985dv2zl".to_string(),
-                &config_with_true_verify
+                &CONFIG_WITH_TRUE_VERIFY
             ),
             Ok("Veritification of the 'raw( deadbeef )#985dv2zl' script succeeded!".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(DEAD BEEF)#qqn7ll2h".to_string(),
-                &config_with_true_verify
+                &CONFIG_WITH_TRUE_VERIFY
             ),
             Ok("Veritification of the 'raw(DEAD BEEF)#qqn7ll2h' script succeeded!".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(DEA D BEEF)#egs9fwsr".to_string(),
-                &config_with_true_verify
+                &CONFIG_WITH_TRUE_VERIFY
             ),
             Ok("Veritification of the 'raw(DEA D BEEF)#egs9fwsr' script succeeded!".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(DEA D BEEF)#agaaa9aa".to_string(),
-                &config_with_true_verify
+                &CONFIG_WITH_TRUE_VERIFY
             ),
             Err(ParsingError::new("checksum verification failed!"))
         );
         assert_eq!(
-            script_expression("raw(DEA D BEEF)".to_string(), &config_with_true_verify),
+            script_expression(
+                "raw(deedbeef)#89f8spxm".to_string(),
+                &CONFIG_WITH_TRUE_VERIFY
+            ),
+            Err(ParsingError::new("checksum verification failed!"))
+        );
+        assert_eq!(
+            script_expression("raw(DEA D BEEF)".to_string(), &CONFIG_WITH_TRUE_VERIFY),
             Err(ParsingError::new("checksum is required for verification!"))
         );
 
-        // with compute checksum
-        let config_with_true_compute = ScriptExpressionConfig {
-            compute_checksum: true,
-            verify_checksum: false,
-        };
         assert_eq!(
-            script_expression("raw(deadbeef)".to_string(), &config_with_true_compute),
+            script_expression("raw(deadbeef)".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
             Ok("raw(deadbeef)#89f8spxm".to_string())
         );
         assert_eq!(
-            script_expression("raw( deadbeef )".to_string(), &config_with_true_compute),
+            script_expression("raw( deadbeef )".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
             Ok("raw( deadbeef )#985dv2zl".to_string())
         );
         assert_eq!(
-            script_expression("raw(DEAD BEEF)".to_string(), &config_with_true_compute),
+            script_expression("raw(DEAD BEEF)".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
             Ok("raw(DEAD BEEF)#qqn7ll2h".to_string())
         );
         assert_eq!(
-            script_expression("raw(DEA D BEEF)".to_string(), &config_with_true_compute),
+            script_expression("raw(DEA D BEEF)".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
             Ok("raw(DEA D BEEF)#egs9fwsr".to_string())
         );
         assert_eq!(
             script_expression(
                 "raw(deadbeef)#xxxxxxxxxxxxxxxx".to_string(),
-                &config_with_true_compute
+                &CONFIG_WITH_TRUE_COMPUTE
             ),
             Ok("raw(deadbeef)#89f8spxm".to_string())
+        );
+        assert_eq!(
+            script_expression("raw(deadbeef)####".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
+            Ok("raw(deadbeef)#89f8spxm".to_string())
+        );
+    }
+
+    #[test]
+    fn test_multi_script() {
+        assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)#5jlj4shz".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)#5jlj4shz".to_string()));
+        assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("arg count indicator cannot be higher than actual args count")));
+        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string()));
+        assert_eq!(script_expression("multi(-1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("arg count indicator cannot be negative")));
+        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8Nqtwyb \t GhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybčGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(
+            script_expression(
+                "multi(0)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("multi(0)".to_string())
+        );
+        assert_eq!(
+            script_expression(
+                "multi(1)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "arg count indicator cannot be higher than actual args count"
+            ))
+        );
+        assert_eq!(script_expression(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string()));
+    }
+
+    #[test]
+    fn test_pk_script() {
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#axav5m0j".to_string()));
+        assert_eq!(script_expression("pk(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pk(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#yjz8lyzk".to_string()));
+        assert_eq!(
+            script_expression(
+                "pk(xpub_invalid_format)".to_string(),
+                &CONFIG_WITH_TRUE_COMPUTE
+            ),
+            Err(ParsingError::new("Invalid xpub key: base58 error"))
+        );
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid_checksum".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#axav5m0j".to_string()));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)extra".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Err(ParsingError::new(&script_arg_extraction_err("pk"))));
+        assert_eq!(
+            script_expression("pk()".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
+            Err(ParsingError::new("Input is empty"))
+        );
+        assert_eq!(
+            script_expression("pk(arg1, arg2)".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
+            Err(ParsingError::new(
+                "exactly one argument is needed for pk script"
+            ))
+        );
+        assert_eq!(script_expression("  pk  (  xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8  )  ".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("  pk  (  xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8  )  #004vptms".to_string()));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string()));
+        assert_eq!(
+            script_expression(
+                "pk(invalid_xpub)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("Could not convert WIF from base58"))
+        );
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("checksum length is incorrect!")));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string()));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#axav5m0j".to_string(), &CONFIG_WITH_TRUE_VERIFY), Ok("Veritification of the 'pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#axav5m0j' script succeeded!".to_string()));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum length is incorrect!")));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum verification failed!")));
+        assert_eq!(script_expression("pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum is required for verification!")));
+    }
+
+    #[test]
+    fn test_pkh_script() {
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#vm4xc4ed".to_string()));
+        assert_eq!(script_expression("pkh(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pkh(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#ujpe9npc".to_string()));
+        assert_eq!(
+            script_expression(
+                "pkh(xpub_invalid_format)".to_string(),
+                &CONFIG_WITH_TRUE_COMPUTE
+            ),
+            Err(ParsingError::new("Invalid xpub key: base58 error"))
+        );
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid_checksum".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#vm4xc4ed".to_string()));
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)extra".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Err(ParsingError::new("Could not extract arguments from 'pkh' expression.")));
+        assert_eq!(
+            script_expression("pkh()".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
+            Err(ParsingError::new("Input is empty"))
+        );
+        assert_eq!(
+            script_expression("pkh(arg1, arg2)".to_string(), &CONFIG_WITH_TRUE_COMPUTE),
+            Err(ParsingError::new(
+                "exactly one argument is needed for pkh script"
+            ))
+        );
+        assert_eq!(script_expression("  pkh  (  xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8  )  ".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("  pkh  (  xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8  )  #z4c2c9hz".to_string()));
+
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string()));
+        assert_eq!(
+            script_expression(
+                "pkh(invalid_xpub)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("Could not convert WIF from base58"))
+        );
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("checksum length is incorrect!")));
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string()));
+        assert_eq!(
+            script_expression("pkh()".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
+            Err(ParsingError::new("Input is empty"))
+        );
+
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#vm4xc4ed".to_string(), &CONFIG_WITH_TRUE_VERIFY), Ok("Veritification of the 'pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#vm4xc4ed' script succeeded!".to_string()));
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#invalid".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum length is incorrect!")));
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#abcdefgh".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum verification failed!")));
+        assert_eq!(script_expression("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_TRUE_VERIFY), Err(ParsingError::new("checksum is required for verification!")));
+    }
+
+    #[test]
+    fn test_sh_script() {
+        assert_eq!(script_expression("sh(multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB))#3txhxflq".to_string(), &CONFIG_WITH_TRUE_COMPUTE), Ok("sh(multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB))#3txhxflq".to_string()));
+
+        assert_eq!(
+            script_expression(
+                "sh(raw(deadbeef))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(&script_sh_unsupported_arg_err(
+                "raw(deadbeef)"
+            )))
+        );
+        assert_eq!(
+            script_expression(
+                "sh(pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("sh(pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string())
+        );
+        assert_eq!(
+            script_expression(
+                "sh(pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("sh(pk(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string())
+        );
+        assert_eq!(
+            script_expression(
+                "sh(multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("sh(multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8))".to_string())
+        );
+        assert_eq!(
+            script_expression(
+                "sh(multi(0))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("sh(multi(0))".to_string())
+        );
+        assert_eq!(
+            script_expression("sh( )".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
+            Err(ParsingError::new(
+                "'sh' script's argument must be either 'pk', 'pkh' or 'multi' scripts, but '' was given." 
+            ))
+        );
+        assert_eq!(
+            script_expression(
+                "sh(multi(1, xpub1), extra_arg)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "exactly one argument is needed for sh script"
+            ))
+        );
+        assert_eq!(
+            script_expression(
+                "sh(invalid_start)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "'sh' script's argument must be either 'pk', 'pkh' or 'multi' scripts, but 'invalid_start' was given."
+            ))
+        );
+        assert_eq!(
+            script_expression(
+                "sh(pkh(invalid key))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("Could not convert WIF from base58"))
+        );
+        assert_eq!(
+            script_expression(
+                "sh(multi(1, invalid key))".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new("Could not convert WIF from base58"))
+        );
+
+        assert_eq!(
+            script_expression(
+                "sh(multi(2, xpub1, xpub2))#checksum".to_string(),
+                &CONFIG_WITH_TRUE_VERIFY
+            ),
+            Err(ParsingError::new("Invalid xpub key: base58 error"))
         );
     }
 }
