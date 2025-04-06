@@ -1,12 +1,7 @@
-// TODO: some documentation
 pub const CHECKSUM_DIVIDER_SYMBOL: &str = "#";
-#[allow(dead_code)]
 const CHECKSUM_LENGTH: usize = 8;
-#[allow(dead_code)]
 const INPUT_CHARSET: &str = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#\"\\ ";
-#[allow(dead_code)]
 const CHECKSUM_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
-#[allow(dead_code)]
 const GENERATOR: [u64; 5] = [
     0xf5dee51989,
     0xa9fdca3312,
@@ -20,7 +15,6 @@ enum CharsetKind {
     Checksum,
 }
 
-#[allow(dead_code)]
 fn invalid_char_err_msg(kind: CharsetKind, character: char) -> String {
     let (name, set) = match kind {
         CharsetKind::Input => ("input", INPUT_CHARSET),
@@ -29,7 +23,6 @@ fn invalid_char_err_msg(kind: CharsetKind, character: char) -> String {
     format!("All received {name} characters should be one of \"{set}\". But found character '{character}'.")
 }
 
-#[allow(dead_code)]
 fn checksum_polymod(symbols: Vec<usize>) -> u64 {
     let mut checksum: u64 = 1;
     for value in symbols {
@@ -42,7 +35,6 @@ fn checksum_polymod(symbols: Vec<usize>) -> u64 {
     checksum
 }
 
-#[allow(dead_code)]
 fn checksum_expand(script: &str) -> Vec<usize> {
     let mut groups = Vec::new();
     let mut symbols = Vec::new();
@@ -72,7 +64,6 @@ pub fn checksum_length_check(checksum: &str) -> bool {
     checksum.chars().count() == CHECKSUM_LENGTH
 }
 
-#[allow(dead_code)]
 pub fn checksum_check(script: &str, checksum: &str) -> bool {
     checksum_length_check(checksum)
         && checksum.chars().all(|c| CHECKSUM_CHARSET.find(c).is_some())
@@ -94,7 +85,6 @@ pub fn checksum_check(script: &str, checksum: &str) -> bool {
         ) == 1
 }
 
-#[allow(dead_code)]
 pub fn checksum_create(script: &str) -> String {
     let symbols = checksum_expand(script)
         .into_iter()

@@ -1,6 +1,6 @@
 use crate::{
     structs::{parsing_error::ParsingError, script_expression_config::ScriptExpressionConfig},
-    traits::string_utils::CharArrayUtils,
+    traits::string_utils::{CharArrayUtils, StringUtils},
     utils::error_messages::script_sh_unsupported_arg_err,
 };
 
@@ -19,7 +19,7 @@ pub fn script_expression(
     config: &ScriptExpressionConfig,
 ) -> Result<String, ParsingError> {
     let (script, checksum) = divide_script_and_checksum(input);
-    match script.trim().chars().collect::<Vec<char>>().as_slice() {
+    match script.charify().trimify().as_slice() {
         ['r', 'a', 'w', rest @ ..] => match rest.extract_args("raw")?.as_slice() {
             [arg] => {
                 assert_hexadecimal_format(arg, "raw function argument")?;
@@ -30,7 +30,7 @@ pub fn script_expression(
             [arg_count, rest_of_args @ ..] => match arg_count.parse::<i32>()? {
                 val if val >= 0 && val <= rest_of_args.len() as i32 => {
                     for arg in rest_of_args {
-                        validate_key_expression(arg.clone())?; // TODO: Try to avoid clone?
+                        validate_key_expression(arg.clone())?;
                     }
                 }
                 val if val < 0 => {
@@ -182,8 +182,15 @@ mod tests {
             Ok("raw(DEA D BEEF)".to_string())
         );
         assert_eq!(
+            script_expression(
+                "    raw    (   D    E   A    D    )    ".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Ok("    raw    (   D    E   A    D    )    ".to_string())
+        );
+        assert_eq!(
             script_expression("  \t\t\t  raw  \t\t\t  (  \t\t\t  D  \t\t\t  E  \t\t\t  A  \t\t\t  D  \t\t\t  )  \t\t\t  ".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
-            Ok("  \t\t\t  raw  \t\t\t  (  \t\t\t  D  \t\t\t  E  \t\t\t  A  \t\t\t  D  \t\t\t  )  \t\t\t  ".to_string())
+            Err(ParsingError::new("parsing of the script failed!"))
         );
         assert_eq!(
             script_expression(
@@ -357,7 +364,7 @@ mod tests {
                 "arg count indicator cannot be higher than actual args count"
             ))
         );
-        assert_eq!(script_expression(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string()));
+        assert_eq!(script_expression(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("parsing of the script failed!")));
     }
 
     #[test]

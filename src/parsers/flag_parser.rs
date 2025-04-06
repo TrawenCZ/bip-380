@@ -3,7 +3,7 @@ use crate::{
     utils::error_messages::{missing_follow_up_val_err, multiple_value_flags_detected_err},
 };
 
-pub trait FlagStringUtils {
+trait FlagStringUtils {
     fn flagify(&self) -> String;
 }
 
@@ -33,7 +33,6 @@ impl FlagStringUtils for str {
 /// let example_bool_arg_set = vec!["derive-key", "--example-bool-flag"];
 /// assert!(parse_boolean_flag(&example_bool_arg_set, "example-bool-flag"));
 /// ```
-#[allow(unused)]
 pub fn parse_boolean_flag(args: &mut Vec<&str>, key: &str) -> bool {
     let flag = key.flagify();
     let arg_count_on_entry = args.len();
@@ -69,7 +68,6 @@ pub fn parse_boolean_flag(args: &mut Vec<&str>, key: &str) -> bool {
 ///    Ok(Some(value))
 ///);
 /// ```
-#[allow(unused)]
 pub fn parse_value_flag(args: &mut Vec<&str>, key: &str) -> Result<Option<String>, ParsingError> {
     let flag = key.flagify();
     if args.last() == Some(&flag.as_str()) {

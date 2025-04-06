@@ -4,6 +4,7 @@ use bip32::{secp256k1::elliptic_curve::zeroize::Zeroizing, Prefix, XPrv, XPub};
 
 use crate::{
     structs::{derive_key_config::DeriveKeyConfig, parsing_error::ParsingError},
+    traits::string_utils::StringUtils,
     utils::error_messages::invalid_seed_length_err,
 };
 
@@ -29,7 +30,7 @@ use super::utils::hexadecimal::decode_hex;
 /// is the private key. The key generation process respects the included Derivation Path included in
 /// `DeriveKeyConfig`.
 pub fn derive_key(input: String, config: &DeriveKeyConfig) -> Result<String, ParsingError> {
-    let (xpub, xpriv) = match input.chars().collect::<Vec<char>>().as_slice() {
+    let (xpub, xpriv) = match input.charify().as_slice() {
         priv_key @ ['x', 'p', 'r', 'v', ..] => {
             let mut xpriv = XPrv::from_str(&priv_key.iter().collect::<String>())?;
 
@@ -53,7 +54,7 @@ pub fn derive_key(input: String, config: &DeriveKeyConfig) -> Result<String, Par
         seed_input => {
             let seed_no_whitespace = seed_input
                 .iter()
-                .filter(|c| !c.is_whitespace())
+                .filter(|&&c| c != ' ' && c != '\t')
                 .collect::<String>();
 
             if seed_no_whitespace.chars().count() % 2 != 0 {
