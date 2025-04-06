@@ -1,7 +1,6 @@
 use crate::structs::parsing_error::ParsingError;
 
 /// A trait for parsing command line arguments into a command struct.
-#[allow(unused)]
 pub trait Parsable {
     /// Parse the given arguments into a struct.
     ///

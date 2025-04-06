@@ -23,12 +23,23 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
         .collect()
 }
 
+/// The function `assert_hexadecimal_format` checks if the input string is a valid hexadecimal string.
+///
+/// Arguments:
+///
+/// * `input`: A string slice that represents the input to be checked.
+/// * `label`: A string slice that represents the label for the input (for the error message).
+///
+/// Returns:
+///
+/// The `assert_hexadecimal_format` function returns a `Result` containing the input string if it is a valid
+/// otherwise, it returns a `ParsingError`.
 pub fn assert_hexadecimal_format<'a>(
     input: &'a str,
     label: &'a str,
 ) -> Result<&'a str, ParsingError> {
     let mut input_clone = input.to_string();
-    input_clone.retain(|c| !c.is_whitespace());
+    input_clone.retain(|c| c != ' ');
 
     if !(!input_clone.is_empty()
         && input_clone.len() % 2 == 0
@@ -67,14 +78,6 @@ mod tests {
         assert_eq!(
             assert_hexadecimal_format("deadbeef", "argument").unwrap(),
             "deadbeef"
-        );
-        assert_eq!(
-            assert_hexadecimal_format(
-                "00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0a\t0b\t0c\t0d\t0e\t0f",
-                "argument"
-            )
-            .unwrap(),
-            "00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0a\t0b\t0c\t0d\t0e\t0f"
         );
         assert_eq!(
             assert_hexadecimal_format(
@@ -118,7 +121,6 @@ mod tests {
                 .to_string(),
             "Parsing error: argument '  ' is not a valid hexadecimal string!"
         );
-
         assert_eq!(
             assert_hexadecimal_format(" 1 ", "argument")
                 .unwrap_err()
@@ -130,6 +132,14 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Parsing error: argument 'f' is not a valid hexadecimal string!"
+        );
+        assert_eq!(
+            assert_hexadecimal_format(
+                "00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0a\t0b\t0c\t0d\t0e\t0f",
+                "argument"
+            )
+            .unwrap_err().to_string(),
+            "Parsing error: argument '00\t01\t02\t03\t04\t05\t06\t07\t08\t09\t0a\t0b\t0c\t0d\t0e\t0f' is not a valid hexadecimal string!"
         );
     }
 }
