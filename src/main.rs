@@ -71,6 +71,8 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
     use assert_cmd::Command;
 
@@ -83,6 +85,25 @@ mod tests {
         let expected_help_message = format!("{HELP_MESSAGE}\n");
         get_cmd()
             .arg("--help")
+            .assert()
+            .success()
+            .stdout(expected_help_message.clone());
+
+        get_cmd()
+            .args(vec!["derive-key", "--help"])
+            .assert()
+            .success()
+            .stdout(expected_help_message.clone());
+
+        get_cmd()
+            .args(vec!["--help", "derive-key"])
+            .assert()
+            .success()
+            .stdout(expected_help_message.clone());
+
+        get_cmd()
+            .args(vec!["derive-key", "-", "--help"])
+            .write_stdin("000102030405060708090a0b0c0d0e0f")
             .assert()
             .success()
             .stdout(expected_help_message);

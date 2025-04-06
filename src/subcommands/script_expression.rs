@@ -132,7 +132,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        structs::script_expression_config::ScriptExpressionConfig,
+        structs::script_expression_config::ScriptExpressionConfig, tests::get_cmd,
         utils::error_messages::script_arg_extraction_err,
     };
 
@@ -533,5 +533,124 @@ mod tests {
             ),
             Err(ParsingError::new("Invalid xpub key: base58 error"))
         );
+    }
+
+    // integration tests
+    #[test]
+    fn test_script_expression_verify_checksum() {
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "raw(deadbeef)#89f8spxm",
+            ])
+            .assert()
+            .success()
+            .stdout("Veritification of the \'raw(deadbeef)#89f8spxm\' script succeeded!\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "raw( deadbeef )#985dv2zl",
+            ])
+            .assert()
+            .success()
+            .stdout("Veritification of the \'raw( deadbeef )#985dv2zl\' script succeeded!\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "raw(DEADBEEF)#49w2hhz7",
+            ])
+            .assert()
+            .success()
+            .stdout("Veritification of the \'raw(DEADBEEF)#49w2hhz7\' script succeeded!\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "raw(DEAD BEEF)#qqn7ll2h",
+            ])
+            .assert()
+            .success()
+            .stdout("Veritification of the \'raw(DEAD BEEF)#qqn7ll2h\' script succeeded!\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "raw(DEA D BEEF)#egs9fwsr",
+            ])
+            .assert()
+            .success()
+            .stdout("Veritification of the \'raw(DEA D BEEF)#egs9fwsr\' script succeeded!\n");
+
+        get_cmd()
+            .args(["script-expression", "--verify-checksum", "raw(deadbeef)"])
+            .assert()
+            .failure()
+            .stderr("Parsing error: checksum is required for verification!\n");
+    }
+
+    #[test]
+    fn test_script_expression_compute_checksum() {
+        get_cmd()
+            .args([
+                "script-expression",
+                "--compute-checksum",
+                "raw(deadbeef)#xxx",
+            ])
+            .assert()
+            .success()
+            .stdout("raw(deadbeef)#89f8spxm\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--compute-checksum",
+                "pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)",
+            ])
+            .assert()
+            .success()
+            .stdout("pkh(xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#vm4xc4ed\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--compute-checksum",
+                "pkh(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)",
+            ])
+            .assert()
+            .success()
+            .stdout("pkh(   xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)#ujpe9npc\n");
+
+        get_cmd()
+            .args([
+                "script-expression",
+                "--compute-checksum",
+                "multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)#5jlj4shz",
+            ])
+            .assert()
+            .success()
+            .stdout("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)#5jlj4shz\n");
+    }
+
+    #[test]
+    fn test_script_expression_compute_and_verify() {
+        get_cmd()
+            .args([
+                "script-expression",
+                "--verify-checksum",
+                "--compute-checksum",
+                "raw(deadbeef)",
+            ])
+            .assert()
+            .failure()
+            .stderr(
+                "Parsing error: use only '--verify-checksum' or '--compute-checksum', not both\n",
+            );
     }
 }

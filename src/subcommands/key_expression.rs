@@ -74,6 +74,8 @@ fn split_key_expression(input: &str) -> Result<(Option<&str>, &str), ParsingErro
 
 #[cfg(test)]
 mod tests {
+    use crate::tests::get_cmd;
+
     use super::*;
 
     #[test]
@@ -148,5 +150,23 @@ mod tests {
                 key_origin
             );
         }
+    }
+
+    // integration test
+    #[test]
+    fn test_key_expression() {
+        let input_string = "0260b2003c386519fc9eadf2b5cf124dd8eea4c4e68d5e154050a9346ea98ce600";
+        get_cmd()
+            .args(["key-expression", input_string])
+            .assert()
+            .success()
+            .stdout(format!("{input_string}\n"));
+
+        let input_string = "[deadbeef/0h/1h/2]xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc/3h/4h/5h/*h";
+        get_cmd()
+            .args(["key-expression", input_string])
+            .assert()
+            .success()
+            .stdout(format!("{input_string}\n"));
     }
 }
