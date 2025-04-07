@@ -55,8 +55,6 @@ pub fn assert_hexadecimal_format<'a>(
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
-    use assert_cmd::assert;
 
     use super::*;
 
