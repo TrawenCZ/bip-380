@@ -80,7 +80,7 @@ fn split_key_expression(input: &str) -> Result<(Option<&str>, &str), ParsingErro
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::get_cmd;
+    use crate::test_utils::get_cmd;
 
     use super::*;
 

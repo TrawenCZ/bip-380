@@ -133,7 +133,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        structs::script_expression_config::ScriptExpressionConfig, tests::get_cmd,
+        structs::script_expression_config::ScriptExpressionConfig, test_utils::get_cmd,
         utils::error_messages::script_arg_extraction_err,
     };
 

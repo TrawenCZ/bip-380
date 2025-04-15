@@ -88,7 +88,8 @@ pub fn derive_key(input: &str, config: &DeriveKeyConfig) -> Result<String, Parsi
 #[cfg(test)]
 mod tests {
     use crate::{
-        structs::derive_key_config::DeriveKeyConfig, tests::get_cmd, traits::parsable::Parsable,
+        structs::derive_key_config::DeriveKeyConfig, test_utils::get_cmd,
+        traits::parsable::Parsable,
     };
 
     #[test]
