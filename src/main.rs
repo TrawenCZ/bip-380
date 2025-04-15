@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsString;
 
 use parsers::arg_parser::{self, Command};
 use subcommands::derive_key::derive_key;
@@ -17,7 +18,14 @@ const FAILURE: i32 = 1;
 
 fn main() {
     // collect args from the CLI skipping the first argument, which is the name of the program
-    let args: Vec<String> = env::args().skip(1).collect();
+    let args: Vec<String> = env::args_os()
+        .map(|arg| arg.into_string())
+        .skip(1)
+        .collect::<Result<Vec<String>, OsString>>()
+        .unwrap_or_else(|err| {
+            eprintln!("Error converting argument to string: {:?}", err);
+            std::process::exit(FAILURE);
+        });
 
     // convert the Vec<String> to Vec<&str>
     let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
