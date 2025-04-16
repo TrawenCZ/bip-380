@@ -2,12 +2,12 @@ use std::{env, ffi::OsString};
 
 use bip380::run_cli;
 
-mod parsers;
-mod structs;
-mod subcommands;
-mod test_utils;
-mod traits;
-mod utils;
+pub mod parsers;
+pub mod structs;
+pub mod subcommands;
+pub mod test_utils;
+pub mod traits;
+pub mod utils;
 
 // exit codes
 const SUCCESS: i32 = 0;
