@@ -2,38 +2,69 @@ use crate::{
     structs::parsing_error::ParsingError, utils::error_messages::script_arg_extraction_err,
 };
 
-pub trait StringUtils {
+const SPACE: char = ' ';
+
+pub trait Trimifiable: Sized {
+    type Output: Sized;
+
+    /// Trims leading and trailing spaces (U+0020) from a character array.
+    fn trimify(self) -> Self::Output;
+}
+
+impl<'a> Trimifiable for &'a str {
+    type Output = &'a str;
+    fn trimify(self) -> Self::Output {
+        let first_non_space = self.find(|c: char| c != SPACE);
+        let last_non_space = self.rfind(|c: char| c != SPACE);
+
+        match (first_non_space, last_non_space) {
+            (Some(start), Some(end)) => &self[start..=end],
+            _ => "",
+        }
+    }
+}
+
+impl Trimifiable for &[char] {
+    type Output = Vec<char>;
+    fn trimify(self) -> Self::Output {
+        let first_non_space = self.iter().position(|&c| c != SPACE);
+        let last_non_space = self.iter().rposition(|&c| c != SPACE);
+
+        match (first_non_space, last_non_space) {
+            (Some(start), Some(end)) => self[start..=end].to_vec(),
+            _ => vec![],
+        }
+    }
+}
+
+pub trait StringSliceUtils<'a>: Trimifiable<Output = &'a str> {
     fn charify(self) -> Vec<char>;
 }
 
-impl StringUtils for &str {
+impl<'a> StringSliceUtils<'a> for &'a str {
     fn charify(self) -> Vec<char> {
         self.chars().collect()
     }
 }
 
-pub trait CharArrayUtils {
+pub trait CharArrayUtils: Trimifiable<Output = Vec<char>> {
     fn stringify(self) -> String;
 
-    /// Trims leading and trailing spaces (U+0020) from a character array.
-    fn trimify(self) -> Vec<char>;
-
+    /// Extracts function arguments from a string slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `label` - The function's label to use for error messages.
+    ///
+    /// # Returns
+    ///
+    /// A vector of strings representing the extracted arguments. Each string is trimmed of leading and trailing spaces (via trimify method).
     fn extract_args(self, label: &str) -> Result<Vec<String>, ParsingError>;
 }
 
 impl CharArrayUtils for &[char] {
     fn stringify(self) -> String {
         self.iter().collect()
-    }
-
-    fn trimify(self) -> Vec<char> {
-        let first_non_space = self.iter().position(|&c| c != ' ');
-        let last_non_space = self.iter().rposition(|&c| c != ' ');
-
-        match (first_non_space, last_non_space) {
-            (Some(start), Some(end)) => self[start..=end].to_vec(),
-            _ => vec![],
-        }
     }
 
     fn extract_args(self, label: &str) -> Result<Vec<String>, ParsingError> {
@@ -45,7 +76,7 @@ impl CharArrayUtils for &[char] {
                 _ => Ok(raw_inputs
                     .stringify()
                     .split(',')
-                    .map(|arg| arg.trim().to_string())
+                    .map(|arg| arg.trimify().to_string())
                     .collect()),
             },
             _ => Err(ParsingError::new(&script_arg_extraction_err(label))),
@@ -58,7 +89,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_trimify() {
+    fn test_trimify_for_the_char_array() {
         let chars: &[char] = &[' ', ' ', ' ', 'H', 'e', 'l', 'l', 'o', ' ', ' ', ' '];
         assert_eq!(chars.trimify(), vec!['H', 'e', 'l', 'l', 'o']);
         let chars: &[char] = &['H', 'e', 'l', 'l', 'o'];
@@ -80,5 +111,17 @@ mod tests {
             chars.trimify(),
             vec!['\t', ' ', 'H', 'e', 'l', 'l', 'o', ' ', '\t']
         );
+    }
+    #[test]
+    fn test_trimify_for_the_string_slice() {
+        assert_eq!("   Hello   ".trimify(), "Hello");
+        assert_eq!("Hello".trimify(), "Hello");
+        assert_eq!("   ".trimify(), "");
+        assert_eq!("".trimify(), "");
+        assert_eq!(" t ".trimify(), "t");
+        assert_eq!(" Hello".trimify(), "Hello");
+        assert_eq!("Hello ".trimify(), "Hello");
+        assert_eq!("Hel lo".trimify(), "Hel lo");
+        assert_eq!(" \t Hello \t ".trimify(), "\t Hello \t");
     }
 }
