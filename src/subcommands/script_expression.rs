@@ -1,6 +1,6 @@
 use crate::{
     structs::{parsing_error::ParsingError, script_expression_config::ScriptExpressionConfig},
-    traits::string_utils::{CharArrayUtils, StringUtils},
+    traits::string_utils::{CharArrayUtils, StringSliceUtils, Trimifiable},
     utils::error_messages::script_sh_unsupported_arg_err,
 };
 
@@ -194,6 +194,33 @@ mod tests {
         );
         assert_eq!(
             script_expression(
+                "raw(\tDEADBEEF)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "raw function argument '\tDEADBEEF' is not a valid hexadecimal string!"
+            ))
+        );
+        assert_eq!(
+            script_expression(
+                "raw(\nDEADBEEF)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "raw function argument '\nDEADBEEF' is not a valid hexadecimal string!"
+            ))
+        );
+        assert_eq!(
+            script_expression(
+                "raw(\u{a0}DEADBEEF)".to_string(),
+                &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
+            ),
+            Err(ParsingError::new(
+                "raw function argument '\u{a0}DEADBEEF' is not a valid hexadecimal string!"
+            ))
+        );
+        assert_eq!(
+            script_expression(
                 "raw(nothexadecimal)".to_string(),
                 &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY
             ),
@@ -365,6 +392,15 @@ mod tests {
             ))
         );
         assert_eq!(script_expression(" \t \t \t multi \t \t \t (\t \t \t 2 \t \t \t, \t \t \t xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, \t \t \t xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)\t \t \t".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("parsing of the script failed!")));
+        assert_eq!(script_expression("multi(\t2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("invalid digit found in string")));
+        assert_eq!(script_expression("multi(2,\txpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8,\txpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(\n2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("invalid digit found in string")));
+        assert_eq!(script_expression("multi(2,\nxpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8,\nxpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(\u{a0}2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("invalid digit found in string")));
+        assert_eq!(script_expression("multi(2,\u{a0}xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8,\u{a0}xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
     }
 
     #[test]

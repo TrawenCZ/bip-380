@@ -4,7 +4,7 @@ use bip32::{secp256k1::elliptic_curve::zeroize::Zeroizing, Prefix, XPrv, XPub};
 
 use crate::{
     structs::{derive_key_config::DeriveKeyConfig, parsing_error::ParsingError},
-    traits::string_utils::StringUtils,
+    traits::string_utils::StringSliceUtils,
     utils::error_messages::invalid_seed_length_err,
 };
 
