@@ -7,7 +7,7 @@ pub fn multiple_value_flags_detected_err(key: &str) -> String {
 }
 
 pub fn invalid_seed_length_err(seed_no_whitespace: &str) -> String {
-    format!("The provided seed '{seed_no_whitespace}' doesn't have even length and thus cannot be complete valid hexadecimal number representation")
+    format!("The provided seed part '{seed_no_whitespace}' doesn't have even length and thus cannot be complete valid hexadecimal number representation.")
 }
 
 pub fn script_arg_extraction_err(label: &str) -> String {
