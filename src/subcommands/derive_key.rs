@@ -4,7 +4,7 @@ use bip32::{secp256k1::elliptic_curve::zeroize::Zeroizing, Prefix, XPrv, XPub};
 
 use crate::{
     structs::{derive_key_config::DeriveKeyConfig, parsing_error::ParsingError},
-    traits::string_utils::StringSliceUtils,
+    traits::string_utils::{CharArrayUtils, StringSliceUtils},
     utils::error_messages::invalid_seed_length_err,
 };
 
@@ -53,15 +53,13 @@ pub fn derive_key(input: String, config: &DeriveKeyConfig) -> Result<String, Par
         }
         seed_input => {
             let seed_no_whitespace = seed_input
-                .iter()
-                .filter(|&&c| c != ' ' && c != '\t')
-                .collect::<String>();
-
-            if seed_no_whitespace.chars().count() % 2 != 0 {
-                return Err(ParsingError::new(&invalid_seed_length_err(
-                    &seed_no_whitespace,
-                )));
-            }
+                .stringify()
+                .split([' ', '\t'])
+                .map(|slice| match slice.chars().count() % 2 == 0 {
+                    true => Ok(slice),
+                    false => Err(ParsingError::new(&invalid_seed_length_err(slice))),
+                })
+                .collect::<Result<String, ParsingError>>()?;
 
             let seed = decode_hex(&seed_no_whitespace)?;
 

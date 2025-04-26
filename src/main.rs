@@ -108,4 +108,12 @@ mod tests {
             .success()
             .stdout(expected_help_message);
     }
+
+    #[test]
+    fn derive_key_invalid_seed_whitespaces_error() {
+        get_cmd()
+            .args(vec!["derive-key", "0	0 0 1 02030405060708090a0b0c0d0e0f"])
+            .assert()
+            .failure();
+    }
 }
