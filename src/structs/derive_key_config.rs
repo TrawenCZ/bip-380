@@ -4,7 +4,7 @@ use crate::{parsers::flag_parser::parse_value_flag, traits::parsable::Parsable};
 
 use super::parsing_error::ParsingError;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct DeriveKeyConfig {
     pub path: DerivationPath,
 }
