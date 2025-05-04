@@ -12,7 +12,8 @@ use bip32::DerivationPath;
 ///      A closing bracket ]
 ///
 pub fn validate_key_origin(key_origin: &str) -> Result<(), ParsingError> {
-    let content = key_origin
+    let lowercase = key_origin.to_ascii_lowercase();
+    let content = lowercase
         .strip_prefix('[')
         .and_then(|s| s.strip_suffix(']'))
         .ok_or_else(|| ParsingError::new("Key origin must start with [ and end with ]"))?;
@@ -42,6 +43,16 @@ mod tests {
     fn test_validate_key_origin_valid() {
         // This key origin contains a valid 8-character fingerprint followed by valid derivation path elements.
         let key_origin = "[deadbeef/0h/1h/2]";
+        let result = validate_key_origin(key_origin);
+        assert!(
+            result.is_ok(),
+            "Expected valid key origin to pass validation"
+        );
+    }
+
+    #[test]
+    fn test_validate_key_origin_valid_capital_mixed_hardened_indicators() {
+        let key_origin = "[deadbeef/0h/1H/2']";
         let result = validate_key_origin(key_origin);
         assert!(
             result.is_ok(),
