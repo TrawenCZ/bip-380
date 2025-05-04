@@ -29,13 +29,13 @@ use super::utils::{extended_key::validate_extended_key_attrs, hexadecimal::decod
 /// value contains the derived key in the format "xpub:xpriv" where `xpub` is the public key and `xpriv`
 /// is the private key. The key generation process respects the included Derivation Path included in
 /// `DeriveKeyConfig`.
-pub fn derive_key(input: String, config: &DeriveKeyConfig) -> Result<String, ParsingError> {
+pub fn derive_key(input: &str, config: &DeriveKeyConfig) -> Result<String, ParsingError> {
     let (xpub, xpriv) = match input.charify().as_slice() {
         priv_key @ ['x', 'p', 'r', 'v', ..] => {
             let mut xpriv = XPrv::from_str(&priv_key.iter().collect::<String>())?;
 
             for child_number in config.path.iter() {
-                xpriv = xpriv.derive_child(child_number)?
+                xpriv = xpriv.derive_child(child_number)?;
             }
 
             validate_extended_key_attrs(xpriv.attrs())?;
@@ -50,20 +50,23 @@ pub fn derive_key(input: String, config: &DeriveKeyConfig) -> Result<String, Par
             let mut xpub = XPub::from_str(&pub_key.iter().collect::<String>())?;
 
             for child_number in config.path.iter() {
-                xpub = xpub.derive_child(child_number)?
+                xpub = xpub.derive_child(child_number)?;
             }
 
             validate_extended_key_attrs(xpub.attrs())?;
 
-            (xpub.to_string(Prefix::XPUB), Zeroizing::new("".into()))
+            (xpub.to_string(Prefix::XPUB), Zeroizing::new(String::new()))
         }
         seed_input => {
             let seed_no_whitespace = seed_input
                 .stringify()
                 .split([' ', '\t'])
-                .map(|slice| match slice.chars().count() % 2 == 0 {
-                    true => Ok(slice),
-                    false => Err(ParsingError::new(&invalid_seed_length_err(slice))),
+                .map(|slice| {
+                    if slice.chars().count() % 2 == 0 {
+                        Ok(slice)
+                    } else {
+                        Err(ParsingError::new(&invalid_seed_length_err(slice)))
+                    }
                 })
                 .collect::<Result<String, ParsingError>>()?;
 
@@ -177,8 +180,8 @@ mod tests {
             .write_stdin("\
             000102030405060708090a0b0c0d0e0f\n\
             fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542
-            
-            
+
+
             xx
             ")
             .assert()
@@ -236,7 +239,7 @@ mod tests {
         #[test]
         fn basic_seed_validation_valid() {
             let result = derive_key(
-                "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".into(), 
+                "fffcf9f6f3f0edeae7e4e1dedbd8d5d2cfccc9c6c3c0bdbab7b4b1aeaba8a5a29f9c999693908d8a8784817e7b7875726f6c696663605d5a5754514e4b484542".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_ok());
@@ -402,7 +405,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_vector_1_1() {
             let result = derive_key(
-                "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8".into(), 
+                "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_ok());
@@ -411,7 +414,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_vector_1_2() {
             let result = derive_key(
-                "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw".into(), 
+                "xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_ok());
@@ -437,7 +440,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_vector_1_5() {
             let result = derive_key(
-                "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy".into(), 
+                "xpub6H1LXWLaKsWFhvm6RVpEL9P4KfRZSW7abD2ttkWP3SSQvnyA8FSVqNTEcYFgJS2UaFcxupHiYkro49S8yGasTvXEYBVPamhGW6cFJodrTHy".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_ok());
         }
@@ -445,7 +448,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_version_invalid() {
             let result = derive_key(
-                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm".into(), 
+                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6LBpB85b3D2yc8sfvZU521AAwdZafEz7mnzBBsz4wKY5fTtTQBm".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -453,7 +456,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_prefix_04_invalid() {
             let result = derive_key(
-                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6Txnt3siSujt9RCVYsx4qHZGc62TG4McvMGcAUjeuwZdduYEvFn".into(), 
+                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6Txnt3siSujt9RCVYsx4qHZGc62TG4McvMGcAUjeuwZdduYEvFn".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_err());
@@ -462,7 +465,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_prefix_01_invalid() {
             let result = derive_key(
-                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6N8ZMMXctdiCjxTNq964yKkwrkBJJwpzZS4HS2fxvyYUA4q2Xe4".into(), 
+                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6N8ZMMXctdiCjxTNq964yKkwrkBJJwpzZS4HS2fxvyYUA4q2Xe4".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_err());
@@ -471,7 +474,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_zero_depth_with_non_zero_parent_fingerprint_invalid() {
             let result = derive_key(
-                "xpub661no6RGEX3uJkY4bNnPcw4URcQTrSibUZ4NqJEw5eBkv7ovTwgiT91XX27VbEXGENhYRCf7hyEbWrR3FewATdCEebj6znwMfQkhRYHRLpJ".into(), 
+                "xpub661no6RGEX3uJkY4bNnPcw4URcQTrSibUZ4NqJEw5eBkv7ovTwgiT91XX27VbEXGENhYRCf7hyEbWrR3FewATdCEebj6znwMfQkhRYHRLpJ".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_err());
@@ -489,7 +492,7 @@ mod tests {
         #[test]
         fn derive_key_xpub_invalid_pubkey_invalid() {
             let result = derive_key(
-                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6Q5JXayek4PRsn35jii4veMimro1xefsM58PgBMrvdYre8QyULY".into(), 
+                "xpub661MyMwAqRbcEYS8w7XLSVeEsBXy79zSzH1J8vCdxAZningWLdN3zgtU6Q5JXayek4PRsn35jii4veMimro1xefsM58PgBMrvdYre8QyULY".into(),
                 &DeriveKeyConfig::default()
             );
             assert!(result.is_err());
@@ -544,7 +547,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_vector_2_2() {
             let result = derive_key(
-                "xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt".into(), 
+                "xprv9vHkqa6EV4sPZHYqZznhT2NPtPCjKuDKGY38FBWLvgaDx45zo9WQRUT3dKYnjwih2yJD9mkrocEZXo1ex8G81dwSM1fwqWpWkeS3v86pgKt".into(),
                 &get_config("0/2147483647H")
             );
             assert!(result.is_ok());
@@ -553,7 +556,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_vector_2_3() {
             let result = derive_key(
-                "xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9".into(), 
+                "xprv9wSp6B7kry3Vj9m1zSnLvN3xH8RdsPP1Mh7fAaR7aRLcQMKTR2vidYEeEg2mUCTAwCd6vnxVrcjfy2kRgVsFawNzmjuHc2YmYRmagcEPdU9".into(),
                 &get_config("0/2147483647H/1")
             );
             assert!(result.is_ok());
@@ -562,7 +565,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_vector_2_4() {
             let result = derive_key(
-                "xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef".into(), 
+                "xprv9zFnWC6h2cLgpmSA46vutJzBcfJ8yaJGg8cX1e5StJh45BBciYTRXSd25UEPVuesF9yog62tGAQtHjXajPPdbRCHuWS6T8XA2ECKADdw4Ef".into(),
                 &get_config("/0/2147483647H/1/2147483646H")
             );
             assert!(result.is_ok());
@@ -592,7 +595,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_valid_vector_1_2() {
             let result = derive_key(
-                "xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7".into(), 
+                "xprv9uHRZZhk6KAJC1avXpDAp4MDc3sQKNxDiPvvkX8Br5ngLNv1TxvUxt4cV1rGL5hj6KCesnDYUhd7oWgT11eZG7XnxHrnYeSvkzY7d2bhkJ7".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_ok());
         }
@@ -600,7 +603,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_prvkey_version_pubkey_missmach_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFGTQQD3dC4H2D5GBj7vWvSQaaBv5cxi9gafk7NF3pnBju6dwKvH".into(), 
+                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFGTQQD3dC4H2D5GBj7vWvSQaaBv5cxi9gafk7NF3pnBju6dwKvH".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -608,7 +611,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_prvkey_prefix_04_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFGpWnsj83BHtEy5Zt8CcDr1UiRXuWCmTQLxEK9vbz5gPstX92JQ".into(), 
+                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFGpWnsj83BHtEy5Zt8CcDr1UiRXuWCmTQLxEK9vbz5gPstX92JQ".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -616,7 +619,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_prvkey_prefix_01_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFAzHGBP2UuGCqWLTAPLcMtD9y5gkZ6Eq3Rjuahrv17fEQ3Qen6J".into(), 
+                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFAzHGBP2UuGCqWLTAPLcMtD9y5gkZ6Eq3Rjuahrv17fEQ3Qen6J".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -640,7 +643,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_0_not_in_1_nminus1_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzF93Y5wvzdUayhgkkFoicQZcP3y52uPPxFnfoLZB21Teqt1VvEHx".into(), 
+                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzF93Y5wvzdUayhgkkFoicQZcP3y52uPPxFnfoLZB21Teqt1VvEHx".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -648,7 +651,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_n_not_in_1_nminus1_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFAzHGBP2UuGCqWLTAPLcMtD5SDKr24z3aiUvKr9bJpdrcLg1y3G".into(), 
+                "xprv9s21ZrQH143K24Mfq5zL5MhWK9hUhhGbd45hLXo2Pq2oqzMMo63oStZzFAzHGBP2UuGCqWLTAPLcMtD5SDKr24z3aiUvKr9bJpdrcLg1y3G".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }
@@ -656,7 +659,7 @@ mod tests {
         #[test]
         fn derive_key_xprv_checksum_invalid() {
             let result = derive_key(
-                "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL".into(), 
+                "xprv9s21ZrQH143K3QTDL4LXw2F7HEK3wJUD2nW2nRk4stbPy6cq3jPPqjiChkVvvNKmPGJxWUtg6LnF5kejMRNNU3TGtRBeJgk33yuGBxrMPHL".into(),
                 &DeriveKeyConfig::default());
             assert!(result.is_err());
         }

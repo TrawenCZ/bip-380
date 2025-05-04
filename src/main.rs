@@ -41,7 +41,7 @@ fn main() {
         }
         Command::ScriptExpression(config) => {
             for input in inputs {
-                match script_expression(input, &config) {
+                match script_expression(&input, &config) {
                     Ok(result) => println!("{result}"),
                     Err(err) => {
                         eprintln!("{err}");
@@ -52,7 +52,7 @@ fn main() {
         }
         Command::DeriveKey(config) => {
             for input in inputs {
-                match derive_key(input, &config) {
+                match derive_key(&input, &config) {
                     Ok(result) => println!("{result}"),
                     Err(err) => {
                         eprintln!("{err}");

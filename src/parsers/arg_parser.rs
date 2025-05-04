@@ -27,29 +27,28 @@ pub type Inputs = Box<dyn Iterator<Item = String>>;
 /// Additional flags or arguments (e.g., --foo) are not considered.
 fn get_inputs(args: &Vec<&str>) -> Result<Inputs, ParsingError> {
     // if '-' is present in args, we should read from stdin
-    match args.contains(&"-") {
-        true => Ok(Box::new(
+    if args.contains(&"-") {
+        Ok(Box::new(
             BufReader::new(stdin())
                 .lines()
                 .map(|line| {
                     line.unwrap_or_else(|e| {
-                        eprintln!("Error reading from stdin: {}", e);
+                        eprintln!("Error reading from stdin: {e}");
                         std::process::exit(FAILURE);
                     })
                 })
                 .filter(|line| !line.is_empty()),
-        )),
-        false => {
-            let mut inputs_peekable = args.iter().skip(1).peekable();
-            match inputs_peekable.peek() {
-                None => Err(ParsingError::new(MISSING_INPUT_ERR_MSG)),
-                Some(_) => Ok(Box::new(
-                    inputs_peekable
-                        .map(|s| s.to_string())
-                        .collect::<Vec<String>>()
-                        .into_iter(),
-                )),
-            }
+        ))
+    } else {
+        let mut inputs_peekable = args.iter().skip(1).peekable();
+        match inputs_peekable.peek() {
+            None => Err(ParsingError::new(MISSING_INPUT_ERR_MSG)),
+            Some(_) => Ok(Box::new(
+                inputs_peekable
+                    .map(std::string::ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .into_iter(),
+            )),
         }
     }
 }
@@ -70,12 +69,7 @@ pub fn parse_args(mut args: Vec<&str>) -> Result<(Command, Inputs), ParsingError
         "derive-key" => Command::DeriveKey(DeriveKeyConfig::parse(&mut args)?),
         "key-expression" => Command::KeyExpression(KeyExpressionConfig::parse(&mut args)?),
         "script-expression" => Command::ScriptExpression(ScriptExpressionConfig::parse(&mut args)?),
-        _ => {
-            return Err(ParsingError::new(&format!(
-                "Invalid argument: {}",
-                first_arg
-            )))
-        }
+        _ => return Err(ParsingError::new(&format!("Invalid argument: {first_arg}"))),
     };
 
     let inputs = get_inputs(&args)?;
