@@ -19,11 +19,11 @@ const FAILURE: i32 = 1;
 fn main() {
     // collect args from the CLI skipping the first argument, which is the name of the program
     let args: Vec<String> = env::args_os()
-        .map(|arg| arg.into_string())
+        .map(std::ffi::OsString::into_string)
         .skip(1)
         .collect::<Result<Vec<String>, OsString>>()
         .unwrap_or_else(|err| {
-            eprintln!("Error converting argument to string: {:?}", err);
+            eprintln!("Error converting argument to string: {err:?}");
             std::process::exit(FAILURE);
         });
 
