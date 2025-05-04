@@ -18,7 +18,7 @@ pub fn script_expression(
     input: String,
     config: &ScriptExpressionConfig,
 ) -> Result<String, ParsingError> {
-    let (script, checksum) = divide_script_and_checksum(input);
+    let (script, checksum) = divide_script_and_checksum(&input);
     match script.charify().trimify().as_slice() {
         ['r', 'a', 'w', rest @ ..] => match rest.extract_args("raw")?.as_slice() {
             [arg] => {
@@ -79,19 +79,19 @@ pub fn script_expression(
         },
         _ => return Err(ParsingError::new("parsing of the script failed!")),
     }
-    script_operation(&script, &checksum, config)
+    script_operation(&script, checksum.as_ref(), config)
 }
 
-fn divide_script_and_checksum(input: String) -> (String, Option<String>) {
+fn divide_script_and_checksum(input: &str) -> (String, Option<String>) {
     let parts: Vec<&str> = input.splitn(2, CHECKSUM_DIVIDER_SYMBOL).collect();
     let script = parts.first().map_or("", |v| v).to_string();
-    let checksum = parts.get(1).map(|s| s.to_string());
+    let checksum = parts.get(1).map(|s| (*s).to_string());
     (script, checksum)
 }
 
 fn script_operation(
     script: &str,
-    checksum: &Option<String>,
+    checksum: Option<&String>,
     config: &ScriptExpressionConfig,
 ) -> Result<String, ParsingError> {
     if config.compute_checksum {
@@ -104,14 +104,13 @@ fn script_operation(
                 if config.verify_checksum {
                     if checksum_check(script, checksum) {
                         Ok(format!(
-                            "Veritification of the '{}#{}' script succeeded!",
-                            script, checksum
+                            "Veritification of the '{script}#{checksum}' script succeeded!"
                         ))
                     } else {
                         Err(ParsingError::new("checksum verification failed!"))
                     }
                 } else {
-                    Ok(format!("{}#{}", script, checksum))
+                    Ok(format!("{script}#{checksum}"))
                 }
             } else {
                 Err(ParsingError::new("checksum length is incorrect!"))
@@ -373,8 +372,7 @@ mod tests {
         assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("arg count indicator cannot be higher than actual args count")));
         assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string()));
         assert_eq!(script_expression("multi(-1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("arg count indicator cannot be negative")));
-        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8Nqtwyb \t GhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
-        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybčGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
+        assert_eq!(script_expression("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Ok("multi(1, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string()));
         assert_eq!(
             script_expression(
                 "multi(0)".to_string(),
@@ -396,6 +394,7 @@ mod tests {
         assert_eq!(script_expression("multi(2,\txpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
         assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8,\txpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
         assert_eq!(script_expression("multi(\n2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("invalid digit found in string")));
+        assert_eq!(script_expression("multi(2,\nxpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
         assert_eq!(script_expression("multi(2,\nxpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
         assert_eq!(script_expression("multi(2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8,\nxpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("Input contains invalid characters")));
         assert_eq!(script_expression("multi(\u{a0}2, xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8, xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB)".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY), Err(ParsingError::new("invalid digit found in string")));
@@ -533,7 +532,7 @@ mod tests {
         assert_eq!(
             script_expression("sh( )".to_string(), &CONFIG_WITH_FALSE_COMPUTE_AND_VERIFY),
             Err(ParsingError::new(
-                "'sh' script's argument must be either 'pk', 'pkh' or 'multi' scripts, but '' was given." 
+                "'sh' script's argument must be either 'pk', 'pkh' or 'multi' scripts, but '' was given."
             ))
         );
         assert_eq!(

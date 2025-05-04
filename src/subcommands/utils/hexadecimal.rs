@@ -41,8 +41,7 @@ pub fn assert_hexadecimal_format(input: &str, label: &str) -> Result<(), Parsing
 
     if input_clone.is_empty() || input_clone.chars().any(|c| !c.is_ascii_hexdigit()) {
         return Err(ParsingError::new(&format!(
-            "{} '{}' is not a valid hexadecimal string!",
-            label, input
+            "{label} '{input}' is not a valid hexadecimal string!"
         )));
     }
     Ok(())

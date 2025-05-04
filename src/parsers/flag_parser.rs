@@ -75,7 +75,7 @@ pub fn parse_value_flag(args: &mut Vec<&str>, key: &str) -> Result<Option<String
     }
 
     match args.windows(2).enumerate().find_map(|(index, w)| match w {
-        [arg1, arg2] if *arg1 == flag => Some((index, String::from(*arg2))),
+        [argument_1, argument_2] if *argument_1 == flag => Some((index, String::from(*argument_2))),
         _ => None,
     }) {
         Some((flag_index, _)) if args[(flag_index + 2)..args.len()].contains(&flag.as_str()) => {
