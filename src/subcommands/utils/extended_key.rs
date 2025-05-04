@@ -50,12 +50,12 @@ pub fn validate_extended_key(key: &str) -> Result<String, ParsingError> {
 
     let mut derivation_segments: Vec<&str> = path[1..].split('/').collect();
 
-    if derivation_segments.last() == Some(&"*") || derivation_segments.last() == Some(&"*h") {
+    if [Some(&"*"), Some(&"*h"), Some(&"*H"), Some(&"*'")].contains(&derivation_segments.last()) {
         derivation_segments.pop();
     }
 
     for segment in derivation_segments {
-        ChildNumber::from_str(segment).map_err(|e| {
+        ChildNumber::from_str(&segment.to_ascii_lowercase()).map_err(|e| {
             ParsingError::new(&format!("Invalid derivation segment '{}': {}", segment, e))
         })?;
     }
@@ -71,6 +71,11 @@ mod tests {
     fn test_validate_extended_key_valid() {
         let input = "xprvA1RpRA33e1JQ7ifknakTFpgNXPmW2YvmhqLQYMmrj4xJXXWYpDPS3xz7iAxn8L39njGVyuoseXzU6rcxFLJ8HFsTjSyQbLYnMpCqE2VbFWc/3h/4h/5h/*h";
         let result = validate_extended_key(input);
+        assert!(result.is_ok());
+    }
+    #[test]
+    fn valid_extended_public_key_with_hardened_derivation_and_children_mixed_hardened_indicator() {
+        let result = validate_extended_key("xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/3'/4h/5H/*'");
         assert!(result.is_ok());
     }
 }
