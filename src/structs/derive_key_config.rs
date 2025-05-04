@@ -16,7 +16,7 @@ impl Parsable for DeriveKeyConfig {
                 match raw_path.chars().nth(0) {
                     Some('/') => raw_path.insert(0, 'm'),
                     _ => raw_path.insert_str(0, "m/"),
-                };
+                }
 
                 raw_path
                     .to_lowercase()

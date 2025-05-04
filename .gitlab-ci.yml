@@ -28,7 +28,7 @@ build_test_lint:
     - cargo fmt -- --check
     - echo "Checking for clippy warnings for ${PROJECT_NAME}..."
     - rustup component add clippy
-    - cargo clippy -- -D warnings
+    - cargo clippy -- -D warnings -D clippy::pedantic
 
 release-build-linux:
   image: rust:alpine3.20

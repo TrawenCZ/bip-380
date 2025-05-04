@@ -27,7 +27,7 @@ pub fn validate_extended_key_attrs(attrs: &ExtendedKeyAttrs) -> Result<(), Parsi
 }
 
 /// Validate whether key is xpub encoded extended public key or xprv encoded extended private key (as defined in BIP 32):
-///     Followed by zero or more /NUM or /NUMh path elements indicating BIP 32 derivation steps to be taken after the given extended key.
+///     Followed by zero or more /NUM or /`NUMh` path elements indicating BIP 32 derivation steps to be taken after the given extended key.
 ///     Optionally followed by a single /* or /*h final step to denote all direct unhardened or hardened children.
 ///     Returns the key as a String
 pub fn validate_extended_key(key: &str) -> Result<String, ParsingError> {
@@ -39,9 +39,9 @@ pub fn validate_extended_key(key: &str) -> Result<String, ParsingError> {
 
     // Check if the key is valid
     if key.starts_with("xpub") {
-        XPub::from_str(key).map_err(|e| ParsingError::new(&format!("Invalid xpub key: {}", e)))?;
+        XPub::from_str(key).map_err(|e| ParsingError::new(&format!("Invalid xpub key: {e}")))?;
     } else {
-        XPrv::from_str(key).map_err(|e| ParsingError::new(&format!("Invalid xprv key: {}", e)))?;
+        XPrv::from_str(key).map_err(|e| ParsingError::new(&format!("Invalid xprv key: {e}")))?;
     }
 
     if path.is_empty() {
@@ -56,7 +56,7 @@ pub fn validate_extended_key(key: &str) -> Result<String, ParsingError> {
 
     for segment in derivation_segments {
         ChildNumber::from_str(&segment.to_ascii_lowercase()).map_err(|e| {
-            ParsingError::new(&format!("Invalid derivation segment '{}': {}", segment, e))
+            ParsingError::new(&format!("Invalid derivation segment '{segment}': {e}"))
         })?;
     }
 

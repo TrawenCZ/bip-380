@@ -28,10 +28,10 @@ fn main() {
         });
 
     // convert the Vec<String> to Vec<&str>
-    let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
+    let args: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
 
     let (command, inputs) = arg_parser::parse_args(args).unwrap_or_else(|err| {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         std::process::exit(FAILURE);
     });
 
@@ -39,9 +39,9 @@ fn main() {
         Command::KeyExpression(config) => {
             for input in inputs {
                 match key_expression(input, &config) {
-                    Ok(result) => println!("{}", result),
+                    Ok(result) => println!("{result}"),
                     Err(err) => {
-                        eprintln!("{}", err);
+                        eprintln!("{err}");
                         std::process::exit(FAILURE);
                     }
                 }
@@ -49,10 +49,10 @@ fn main() {
         }
         Command::ScriptExpression(config) => {
             for input in inputs {
-                match script_expression(input, &config) {
-                    Ok(result) => println!("{}", result),
+                match script_expression(&input, &config) {
+                    Ok(result) => println!("{result}"),
                     Err(err) => {
-                        eprintln!("{}", err);
+                        eprintln!("{err}");
                         std::process::exit(FAILURE);
                     }
                 }
@@ -60,17 +60,17 @@ fn main() {
         }
         Command::DeriveKey(config) => {
             for input in inputs {
-                match derive_key(input, &config) {
-                    Ok(result) => println!("{}", result),
+                match derive_key(&input, &config) {
+                    Ok(result) => println!("{result}"),
                     Err(err) => {
-                        eprintln!("{}", err);
+                        eprintln!("{err}");
                         std::process::exit(FAILURE);
                     }
                 }
             }
         }
         Command::Help => {
-            println!("{}", HELP_MESSAGE);
+            println!("{HELP_MESSAGE}");
         }
     }
 

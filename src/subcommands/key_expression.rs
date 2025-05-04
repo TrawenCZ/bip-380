@@ -73,7 +73,7 @@ fn split_key_expression(input: &str) -> Result<(Option<&str>, &str), ParsingErro
         let (key_origin, key) = input.split_at(end_index + 1);
 
         return Ok((Some(key_origin), key));
-    };
+    }
 
     Ok((None, input))
 }

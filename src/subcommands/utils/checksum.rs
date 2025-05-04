@@ -3,11 +3,11 @@ const CHECKSUM_LENGTH: usize = 8;
 const INPUT_CHARSET: &str = "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#\"\\ ";
 const CHECKSUM_CHARSET: &str = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 const GENERATOR: [u64; 5] = [
-    0xf5dee51989,
-    0xa9fdca3312,
-    0x1bab10e32d,
-    0x3706b1677a,
-    0x644d626ffd,
+    0xf5_dee5_1989,
+    0xa9_fdca_3312,
+    0x1b_ab10_e32d,
+    0x37_06b1_677a,
+    0x64_4d62_6ffd,
 ];
 
 enum CharsetKind {
@@ -15,7 +15,7 @@ enum CharsetKind {
     Checksum,
 }
 
-fn invalid_char_err_msg(kind: CharsetKind, character: char) -> String {
+fn invalid_char_err_msg(kind: &CharsetKind, character: char) -> String {
     let (name, set) = match kind {
         CharsetKind::Input => ("input", INPUT_CHARSET),
         CharsetKind::Checksum => ("checksum", CHECKSUM_CHARSET),
@@ -27,7 +27,7 @@ fn checksum_polymod(symbols: Vec<usize>) -> u64 {
     let mut checksum: u64 = 1;
     for value in symbols {
         let top = checksum >> 35;
-        checksum = ((checksum & 0x7ffffffff) << 5) ^ value as u64;
+        checksum = ((checksum & 0x7_ffff_ffff) << 5) ^ value as u64;
         for (i, &gen) in GENERATOR.iter().enumerate() {
             checksum ^= if ((top >> i) & 1) != 0 { gen } else { 0 };
         }
@@ -42,7 +42,7 @@ fn checksum_expand(script: &str) -> Vec<usize> {
     for character in script.chars() {
         let index = INPUT_CHARSET
             .find(character)
-            .unwrap_or_else(|| panic!("{}", invalid_char_err_msg(CharsetKind::Input, character)));
+            .unwrap_or_else(|| panic!("{}", invalid_char_err_msg(&CharsetKind::Input, character)));
         symbols.push(index & 31);
         groups.push(index >> 5);
 
@@ -76,7 +76,7 @@ pub fn checksum_check(script: &str, checksum: &str) -> bool {
                         .chars()
                         .map(|c| {
                             CHECKSUM_CHARSET.find(c).unwrap_or_else(|| {
-                                panic!("{}", invalid_char_err_msg(CharsetKind::Checksum, c))
+                                panic!("{}", invalid_char_err_msg(&CharsetKind::Checksum, c))
                             })
                         })
                         .collect::<Vec<usize>>(),

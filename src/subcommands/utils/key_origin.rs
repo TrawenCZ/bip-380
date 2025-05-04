@@ -8,7 +8,7 @@ use bip32::DerivationPath;
 /// Key origin  consists of:
 ///      An open bracket [
 ///      Exactly 8 hex characters for the fingerprint of the key where the derivation starts (see BIP 32 for details)
-///      Followed by zero or more /NUM or /NUMh path elements to indicate the unhardened or hardened derivation steps between the fingerprint and the key that follows.
+///      Followed by zero or more /NUM or /`NUMh` path elements to indicate the unhardened or hardened derivation steps between the fingerprint and the key that follows.
 ///      A closing bracket ]
 ///
 pub fn validate_key_origin(key_origin: &str) -> Result<(), ParsingError> {
@@ -27,10 +27,10 @@ pub fn validate_key_origin(key_origin: &str) -> Result<(), ParsingError> {
         return Err(ParsingError::new("Fingerprint is not valid hex"));
     }
 
-    let path = format!("m{}", path);
+    let path = format!("m{path}");
 
     path.parse::<DerivationPath>()
-        .map_err(|e| ParsingError::new(&format!("Invalid derivation path: {}", e)))?;
+        .map_err(|e| ParsingError::new(&format!("Invalid derivation path: {e}")))?;
 
     Ok(())
 }
