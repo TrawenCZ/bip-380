@@ -32,25 +32,20 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
 ///
 /// Returns:
 ///
-/// The `assert_hexadecimal_format` function returns a `Result` containing the input string if it is a valid
-/// otherwise, it returns a `ParsingError`.
-pub fn assert_hexadecimal_format<'a>(
-    input: &'a str,
-    label: &'a str,
-) -> Result<&'a str, ParsingError> {
+/// A `Result` that indicates whether the input string is a valid hexadecimal string or not.
+/// If the input string is valid, it returns `Ok(())`. If the input string is not valid, it returns an
+/// `Err` containing a `ParsingError`.
+pub fn assert_hexadecimal_format(input: &str, label: &str) -> Result<(), ParsingError> {
     let mut input_clone = input.to_string();
     input_clone.retain(|c| c != ' ');
 
-    if !(!input_clone.is_empty()
-        && input_clone.len() % 2 == 0
-        && input_clone.chars().all(|c| c.is_ascii_hexdigit()))
-    {
+    if input_clone.is_empty() || input_clone.chars().any(|c| !c.is_ascii_hexdigit()) {
         return Err(ParsingError::new(&format!(
             "{} '{}' is not a valid hexadecimal string!",
             label, input
         )));
     }
-    Ok(input)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -61,38 +56,23 @@ mod tests {
     #[test]
     fn test_is_hexadecimal() {
         // ok
-        assert_eq!(
-            assert_hexadecimal_format("1234", "argument").unwrap(),
-            "1234"
-        );
-        assert_eq!(
-            assert_hexadecimal_format("  12 34  ", "argument").unwrap(),
-            "  12 34  "
-        );
-        assert_eq!(
-            assert_hexadecimal_format("  12 34 ff ", "argument").unwrap(),
-            "  12 34 ff "
-        );
-        assert_eq!(
-            assert_hexadecimal_format("deadbeef", "argument").unwrap(),
-            "deadbeef"
-        );
-        assert_eq!(
-            assert_hexadecimal_format(
-                "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f",
-                "argument"
-            )
-            .unwrap(),
-            "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f"
-        );
-        assert_eq!(
-            assert_hexadecimal_format(
-                "0 0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0 9 0 A 0 B 0 C 0 D 0 E 0 F",
-                "argument"
-            )
-            .unwrap(),
-            "0 0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0 9 0 A 0 B 0 C 0 D 0 E 0 F"
-        );
+        assert!(assert_hexadecimal_format("1234", "argument").is_ok());
+        assert!(assert_hexadecimal_format("  12 34  ", "argument").is_ok());
+        assert!(assert_hexadecimal_format("  12 34 ff ", "argument").is_ok());
+        assert!(assert_hexadecimal_format("deadbeef", "argument").is_ok());
+        assert!(assert_hexadecimal_format(
+            "00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f",
+            "argument"
+        )
+        .is_ok());
+        assert!(assert_hexadecimal_format(
+            "0 0 0 1 0 2 0 3 0 4 0 5 0 6 0 7 0 8 0 9 0 A 0 B 0 C 0 D 0 E 0 F",
+            "argument"
+        )
+        .is_ok());
+        assert!(assert_hexadecimal_format("123", "argument").is_ok());
+        assert!(assert_hexadecimal_format(" 1 ", "argument").is_ok());
+        assert!(assert_hexadecimal_format("f", "argument").is_ok());
 
         // errors
         assert_eq!(
@@ -100,12 +80,6 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Parsing error: argument '123G' is not a valid hexadecimal string!"
-        );
-        assert_eq!(
-            assert_hexadecimal_format("123", "argument")
-                .unwrap_err()
-                .to_string(),
-            "Parsing error: argument '123' is not a valid hexadecimal string!"
         );
         assert_eq!(
             assert_hexadecimal_format("", "argument")
@@ -118,18 +92,6 @@ mod tests {
                 .unwrap_err()
                 .to_string(),
             "Parsing error: argument '  ' is not a valid hexadecimal string!"
-        );
-        assert_eq!(
-            assert_hexadecimal_format(" 1 ", "argument")
-                .unwrap_err()
-                .to_string(),
-            "Parsing error: argument ' 1 ' is not a valid hexadecimal string!"
-        );
-        assert_eq!(
-            assert_hexadecimal_format("f", "argument")
-                .unwrap_err()
-                .to_string(),
-            "Parsing error: argument 'f' is not a valid hexadecimal string!"
         );
         assert_eq!(
             assert_hexadecimal_format(
