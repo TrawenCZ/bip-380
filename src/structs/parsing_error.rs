@@ -6,6 +6,7 @@ pub struct ParsingError {
 }
 
 impl ParsingError {
+    #[must_use]
     pub fn new(message: &str) -> ParsingError {
         ParsingError {
             message: message.to_string(),

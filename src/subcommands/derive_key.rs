@@ -10,25 +10,29 @@ use crate::{
 
 use super::utils::{extended_key::validate_extended_key_attrs, hexadecimal::decode_hex};
 
-/// The `derive_key` function in Rust parses input to derive public and private keys based on the
-/// configuration provided.
+/// Derives an extended public and/or private key from the given input and configuration.
 ///
-/// Arguments:
+/// The input can be an extended private key (`xprv`), an extended public key (`xpub`), or a hexadecimal seed.
+/// For `xprv` and `xpub`, the function will derive child keys according to the provided derivation path in the config.
+/// For a seed, the function will decode the hex, derive the root private key, and then derive child keys as specified.
 ///
-/// * `input`: The `input` parameter is either
-///   - public key, prefixed with *xpub*
-///   - private key, prefixed with *xprv*
-///   - seed, which is considered as seed when neither *xpub* and *xprv* prefixes are present
-/// * `config`: The `config` parameter in the `derive_key` function is of type `DeriveKeyConfig`, which
-///   is a reference to a struct containing configuration settings for deriving keys. This struct
-///   includes a field `path` which is a collection of child numbers used in the key derivation process.
+/// # Arguments
 ///
-/// Returns:
+/// * `input` - The input string, which can be an xprv, xpub, or hex seed.
+/// * `config` - The configuration specifying the derivation path.
 ///
-/// The function `derive_key` returns a `Result` containing a `String` or a `ParsingError`. The `String`
-/// value contains the derived key in the format "xpub:xpriv" where `xpub` is the public key and `xpriv`
-/// is the private key. The key generation process respects the included Derivation Path included in
-/// `DeriveKeyConfig`.
+/// # Returns
+///
+/// Returns `Ok(String)` containing the derived xpub and xprv (if available), separated by a colon, or an error message.
+///
+/// # Errors
+///
+/// Returns a [`ParsingError`] if:
+/// - The input is not a valid xprv, xpub, or hex seed,
+/// - The derivation path is invalid,
+/// - Key validation fails,
+/// - The seed is not valid hexadecimal or has an invalid length,
+/// - Any cryptographic operation fails.
 pub fn derive_key(input: &str, config: &DeriveKeyConfig) -> Result<String, ParsingError> {
     let (xpub, xpriv) = match input.charify().as_slice() {
         priv_key @ ['x', 'p', 'r', 'v', ..] => {

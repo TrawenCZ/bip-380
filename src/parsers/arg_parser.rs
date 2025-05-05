@@ -53,7 +53,20 @@ fn get_inputs(args: &Vec<&str>) -> Result<Inputs, ParsingError> {
     }
 }
 
-/// Parse the given arguments into a command and inputs.
+/// Parses the provided command-line arguments and returns the corresponding command and its inputs.
+///
+/// If the `--help` flag is present in the arguments, this function returns the `Help` command and an empty iterator.
+/// Otherwise, it expects the first argument to be one of the supported subcommands and parses its configuration.
+/// The function also determines the input source: if `-` is present in the arguments, input is read from stdin; otherwise,
+/// the argument(s) following the subcommand are used as input.
+///
+/// # Errors
+///
+/// Returns a [`ParsingError`] if:
+/// - No arguments are provided,
+/// - The subcommand is invalid,
+/// - Parsing the subcommand configuration fails,
+/// - No input is provided when required.
 pub fn parse_args(mut args: Vec<&str>) -> Result<(Command, Inputs), ParsingError> {
     // if args includes --help, we should print the help message
     if args.contains(&"--help") {

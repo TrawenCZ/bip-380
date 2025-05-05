@@ -15,7 +15,21 @@ mod utils;
 pub const SUCCESS: i32 = 0;
 pub const FAILURE: i32 = 1;
 
-/// This is the entry point you can call from main.rs *or* fuzz targets.
+/// Parses the command-line arguments and runs the logic accordingly.
+///
+/// # Arguments
+///
+/// * `args` - A collection of command-line arguments to be parsed.
+///
+/// # Returns
+///
+/// * On success, returns a unit type (nothing).
+/// * On failure, prints the error message to standard error and returns a failure code.
+///
+/// # Errors
+///
+/// This function propagates any errors returned by `arg_parser::parse_args` or by subcommands and maps them
+/// to a failure return code.
 pub fn run_cli(args: Vec<&str>) -> Result<(), i32> {
     let (command, inputs) = arg_parser::parse_args(args).map_err(|err| {
         eprintln!("{err}");
@@ -26,7 +40,7 @@ pub fn run_cli(args: Vec<&str>) -> Result<(), i32> {
         Command::KeyExpression(config) => {
             for input in inputs {
                 match key_expression(input, &config) {
-                    Ok(result) => println!("{}", result),
+                    Ok(result) => println!("{result}"),
                     Err(err) => {
                         eprintln!("{err}");
                         return Err(FAILURE);

@@ -1,19 +1,24 @@
+#[must_use]
 pub fn missing_follow_up_val_err(key: &str) -> String {
     format!("Missing follow-up value after flag '{key}'!")
 }
 
+#[must_use]
 pub fn multiple_value_flags_detected_err(key: &str) -> String {
     format!("Multiple flags '{key}' found. You can only specify flag with a value once!")
 }
 
+#[must_use]
 pub fn invalid_seed_length_err(seed_no_whitespace: &str) -> String {
     format!("The provided seed part '{seed_no_whitespace}' doesn't have even length and thus cannot be complete valid hexadecimal number representation.")
 }
 
+#[must_use]
 pub fn script_arg_extraction_err(label: &str) -> String {
     format!("Could not extract arguments from '{label}' expression.")
 }
 
+#[must_use]
 pub fn script_sh_unsupported_arg_err(arg: &str) -> String {
     format!("'sh' script's argument must be either 'pk', 'pkh' or 'multi' scripts, but '{arg}' was given.")
 }

@@ -28,7 +28,7 @@ fn main() {
     let args: Vec<&str> = args.iter().map(std::string::String::as_str).collect();
 
     let exit_code = match run_cli(args) {
-        Ok(_) => SUCCESS,
+        Ok(()) => SUCCESS,
         Err(code) => code,
     };
 
