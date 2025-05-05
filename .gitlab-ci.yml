@@ -14,7 +14,6 @@ stages:
 build_test_lint:
   image: rust:slim-bullseye
   before_script:
-    - apk add --no-cache alpine-sdk
     - rustc --version
     - cargo --version
   stage: build_test_lint
