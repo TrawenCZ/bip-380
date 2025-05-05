@@ -14,6 +14,31 @@ use super::{
     },
 };
 
+/// Parses and processes a script expression according to the provided configuration.
+///
+/// This function supports various script types such as `raw`, `multi`, `pk`, `pkh`, and `sh`.
+/// It validates the script format, checks or computes checksums as requested, and returns the processed script string or an error.
+///
+/// # Arguments
+///
+/// * `input` - The script expression as a string slice.
+/// * `config` - The configuration specifying whether to compute or verify checksums.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` with the processed script or an error message, or `Err(ParsingError)` if parsing or validation fails.
+///
+/// # Errors
+///
+/// Returns a [`ParsingError`] if:
+/// - The script expression is invalid or not recognized,
+/// - Arguments are missing or in the wrong format,
+/// - Checksum verification fails or is missing when required,
+/// - The script contains unsupported or invalid content.
+///
+/// # Panics
+///
+/// Panics if conversion from a positive `i32` to `usize` fails (should not occur in practice).
 pub fn script_expression(
     input: &str,
     config: &ScriptExpressionConfig,
@@ -133,7 +158,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        structs::script_expression_config::ScriptExpressionConfig, tests::get_cmd,
+        structs::script_expression_config::ScriptExpressionConfig, test_utils::get_cmd,
         utils::error_messages::script_arg_extraction_err,
     };
 

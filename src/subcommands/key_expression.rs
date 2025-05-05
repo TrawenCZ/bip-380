@@ -13,6 +13,22 @@ use super::utils::hex_encoded_public_key::has_hex_encoded_public_key_prefix;
 const ALLOWED_CHAR_SET: &str =
     "0123456789()[],'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`# ";
 
+/// Parses and validates a key expression according to the provided configuration.
+///
+/// This function delegates to [`validate_key_expression`] to perform the actual validation of the input string.
+///
+/// # Arguments
+///
+/// * `input` - The key expression as a `String`.
+/// * `_config` - The configuration for key expression parsing (currently unused).
+///
+/// # Returns
+///
+/// Returns `Ok(String)` with the validated key expression, or `Err(ParsingError)` if validation fails.
+///
+/// # Errors
+///
+/// Returns a [`ParsingError`] if the input is empty, contains invalid characters, or fails key format validation.
 pub fn key_expression(
     input: String,
     _config: &KeyExpressionConfig,
@@ -20,6 +36,25 @@ pub fn key_expression(
     validate_key_expression(input)
 }
 
+/// Validates a key expression string for correct format and allowed characters.
+///
+/// This function checks for empty input, invalid characters, key origin format, and key type validity (public key, extended key, or WIF).
+///
+/// # Arguments
+///
+/// * `input` - The key expression as a `String`.
+///
+/// # Returns
+///
+/// Returns `Ok(String)` with the validated key expression, or `Err(ParsingError)` if validation fails.
+///
+/// # Errors
+///
+/// Returns a [`ParsingError`] if:
+/// - The input is empty,
+/// - The input contains invalid characters,
+/// - The key origin or key format is invalid,
+/// - The key fails type-specific validation.
 pub fn validate_key_expression(input: String) -> Result<String, ParsingError> {
     if input.is_empty() {
         return Err(ParsingError::new("Input is empty"));
@@ -80,7 +115,7 @@ fn split_key_expression(input: &str) -> Result<(Option<&str>, &str), ParsingErro
 
 #[cfg(test)]
 mod tests {
-    use crate::tests::get_cmd;
+    use crate::test_utils::get_cmd;
 
     use super::*;
 

@@ -13,26 +13,16 @@ impl FlagStringUtils for str {
     }
 }
 
-/// The function `parse_boolean_flag` checks if a boolean flag specified by `key` is present in the
-/// given `args` array.
+/// Parses a boolean flag from the provided arguments, removing all occurrences of the flag.
 ///
-/// Arguments:
+/// # Arguments
 ///
-/// * `args`: The `args` parameter is a slice of string slices (`&[&str]`) representing the command
-///   line arguments passed to a program or function.
-/// * `key`: The `key` parameter is a string that represents the flag key that we want to parse as a
-///   boolean value. It should **not contain** the leading dashes (`--`), only the name of the key itself.
+/// * `args` - A mutable reference to a vector of argument string slices.
+/// * `key` - The flag key (without leading dashes) to search for.
 ///
-/// Returns:
+/// # Returns
 ///
-/// The function `parse_boolean_flag` returns a boolean value, which indicates whether the provided
-/// `args` slice contains the flag generated from the `key` string.
-///
-/// # Examples
-/// ```rs
-/// let example_bool_arg_set = vec!["derive-key", "--example-bool-flag"];
-/// assert!(parse_boolean_flag(&example_bool_arg_set, "example-bool-flag"));
-/// ```
+/// Returns `true` if the flag was present (and removed), otherwise `false`.
 pub fn parse_boolean_flag(args: &mut Vec<&str>, key: &str) -> bool {
     let flag = key.flagify();
     let arg_count_on_entry = args.len();
@@ -41,33 +31,24 @@ pub fn parse_boolean_flag(args: &mut Vec<&str>, key: &str) -> bool {
     arg_count_on_entry != arg_count_on_leave
 }
 
-/// The function `parse_value_flag` parses a value flag from a slice of string arguments based on a
-/// specified key. Valid value flag needs value following the flag (e.g., "`--value-flag and_its_value`"")
+/// Parses a value flag from the provided arguments, removing the flag and its value if present.
 ///
-/// Arguments:
+/// # Arguments
 ///
-/// * `args`: The `args` parameter is a slice of string slices (`&[&str]`), representing the command
-///   line arguments passed to a program or function.
-/// * `key`: The `key` parameter is a string that represents the flag key that we want to parse as a
-///   boolean value. It should **not contain** the leading dashes (`--`), only the name of the key itself.
+/// * `args` - A mutable reference to a vector of argument string slices.
+/// * `key` - The flag key (without leading dashes) to search for.
 ///
-/// Returns:
+/// # Returns
 ///
-/// The function `parse_value_flag` returns a `Result` containing an `Option<String>`. If
-/// * the key is found along with value, an `Ok(Some(value))` is returned.
-/// * the key is found but value is missing, an `Err(ParsingError(msg))` is returned.
-/// * the key is missing, an `Ok(None)` is returned.
+/// Returns `Ok(Some(value))` if the flag and its value are found and removed,
+/// `Ok(None)` if the flag is not present,
+/// or `Err(ParsingError)` if the flag is present but the value is missing or duplicated.
 ///
-/// # Examples
-/// ```rs
-/// let value = String::from("some-value");
-/// let example_value_arg_set = vec!["derive-key", "--example-value-flag", value.as_str()];
+/// # Errors
 ///
-/// assert_eq!(
-///    parse_value_flag(&example_value_arg_set, "example-value-flag"),
-///    Ok(Some(value))
-///);
-/// ```
+/// Returns a [`ParsingError`] if:
+/// - The flag is present but not followed by a value,
+/// - The flag appears multiple times with values.
 pub fn parse_value_flag(args: &mut Vec<&str>, key: &str) -> Result<Option<String>, ParsingError> {
     let flag = key.flagify();
     if args.last() == Some(&flag.as_str()) {

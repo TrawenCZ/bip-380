@@ -50,15 +50,18 @@ impl<'a> StringSliceUtils<'a> for &'a str {
 pub trait CharArrayUtils: Trimifiable<Output = Vec<char>> {
     fn stringify(self) -> String;
 
-    /// Extracts function arguments from a string slice.
+    /// Extracts arguments from a character array, expecting them to be enclosed in parentheses and separated by commas.
+    ///
+    /// For example, given the input `&['(', 'a', ',', 'b', ')']`, this function will return `Ok(vec!["a", "b"])`.
+    /// If the arguments are nested or not properly enclosed, it will return an error.
     ///
     /// # Arguments
     ///
-    /// * `label` - The function's label to use for error messages.
+    /// * `label` - A label used in error messages to indicate the context of extraction.
     ///
-    /// # Returns
+    /// # Errors
     ///
-    /// A vector of strings representing the extracted arguments. Each string is trimmed of leading and trailing spaces (via trimify method).
+    /// Returns a [`ParsingError`] if the input does not match the expected format (parentheses-enclosed, comma-separated).
     fn extract_args(self, label: &str) -> Result<Vec<String>, ParsingError>;
 }
 
