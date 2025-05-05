@@ -29,6 +29,12 @@ build_test_lint:
     - echo "Checking for clippy warnings for ${PROJECT_NAME}..."
     - rustup component add clippy
     - cargo clippy -- -D warnings -D clippy::pedantic
+    - echo "Checking for security vulnerabilities for ${PROJECT_NAME}..."
+    - cargo install cargo-audit
+    - cargo audit
+    - echo "Running tests with cargo careful..."
+    - cargo install cargo-careful
+    - cargo +nightly careful test
 
 release-build-linux:
   image: rust:alpine3.20
