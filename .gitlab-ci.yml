@@ -12,7 +12,7 @@ stages:
   - release
 
 build_test_lint:
-  image: rust:alpine3.20
+  image: rust:slim-bullseye
   before_script:
     - apk add --no-cache alpine-sdk
     - rustc --version
