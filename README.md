@@ -1,5 +1,9 @@
 # BIP 380
 
+This is a **showcase repository** of a Rust-based team project created as part of a secure programming course at FI MUNI. There were two other contributors apart from myself - Marek Skácelík and Přemysl Bednárek.
+
+---
+
 BIP 380, but in its fastest street-legal version.
 
 ## How to start ✨
